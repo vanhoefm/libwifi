@@ -102,16 +102,16 @@ def derive_pwe_ecc(password, addr1, addr2):
 	for counter in range(1, 100):
 		hash_data = str2bytes(password) + struct.pack("<B", counter)
 		pwd_seed = HMAC256(hash_pw, hash_data)
-		print("PWD-seed:", pwd_seed)
+		log(DEBUG, "PWD-seed: %s" % pwd_seed)
 		pwd_value = KDF_Length(pwd_seed, "SAE Hunting and Pecking", secp256r1_p_data, bits)
-		print("PWD-value:", pwd_value)
+		log(DEBUG, "PWD-value: %s" % pwd_value)
 		pwd_value = int(binascii.hexlify(pwd_value), 16)
 
 		if pwd_value >= secp256r1_p:
 			continue
 		x = pwd_value
 
-		print("X-candidate: %x" % x)
+		log(DEBUG, "X-candidate: %x" % x)
 		y_sqr = (x**3 + secp256r1_a * x + secp256r1_b) % secp256r1_p
 		if legendre_symbol(y_sqr, secp256r1_p) != 1:
 			continue
@@ -261,16 +261,16 @@ def derive_pwe_ecc_eappwd(password, peer_id, server_id, token):
 	for counter in range(1, 100):
 		hash_data = hash_pw + struct.pack("<B", counter)
 		pwd_seed = HMAC256(b"\x00", hash_data)
-		print("PWD-Seed:", hash_data, "=>", pwd_seed)
+		log(DEBUG, "PWD-Seed: %s" % pwd_seed)
 		pwd_value = KDF_Length_eappwd(pwd_seed, "EAP-pwd Hunting And Pecking", bits)
-		print("PWD-Value:", pwd_value)
+		log(DEBUG, "PWD-Value: %s" % pwd_value)
 		pwd_value = int(binascii.hexlify(pwd_value), 16)
 
 		if pwd_value >= secp256r1_p:
 			continue
 		x = pwd_value
 
-		print("X-candidate: %x" % x)
+		log(DEBUG, "X-candidate: %x" % x)
 		y_sqr = (x**3 + secp256r1_a * x + secp256r1_b) % secp256r1_p
 		if legendre_symbol(y_sqr, secp256r1_p) != 1:
 			continue
