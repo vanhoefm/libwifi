@@ -251,7 +251,7 @@ def KDF_Length_eappwd(data, label, length):
 	return result
 
 
-def derive_pwe_ecc_eappwd(password, peer_id, server_id, token):
+def derive_pwe_ecc_eappwd(password, peer_id, server_id, token, info=None):
 	hash_pw = struct.pack(">I", token) + str2bytes(peer_id + server_id + password)
 
 	secp256r1_p_data = binascii.unhexlify("%x" % secp256r1_p)
@@ -278,8 +278,10 @@ def derive_pwe_ecc_eappwd(password, peer_id, server_id, token):
 		solutions = list(sqrt_mod_iter(y_sqr, secp256r1_p))
 		y_bit = getord(pwd_seed[-1]) & 1
 		if solutions[0] & 1 == y_bit:
+			if not info is None: info["counter"] = counter
 			return ECC.EccPoint(x, solutions[0])
 		else:
+			if not info is None: info["counter"] = counter
 			return ECC.EccPoint(x, solutions[1])
 
 
