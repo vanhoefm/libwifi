@@ -5,6 +5,7 @@
 from scapy.all import *
 from Crypto.Cipher import AES
 from datetime import datetime
+import binascii
 
 #### Constants ####
 
@@ -44,6 +45,9 @@ if not "Dot11Encrypted" in locals():
 
 def get_mac_address(interface):
 	return open("/sys/class/net/%s/address" % interface).read().strip()
+
+def addr2bin(addr):
+	return binascii.a2b_hex(addr.replace(':', ''))
 
 #### Packet Processing Functions ####
 
