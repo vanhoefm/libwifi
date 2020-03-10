@@ -96,9 +96,9 @@ class ARP_sock(ARP_am):
 
 #### Packet Processing Functions ####
 
-class MitmSocket(L2Socket):
+class MonitorSocket(L2Socket):
 	def __init__(self, **kwargs):
-		super(MitmSocket, self).__init__(**kwargs)
+		super(MonitorSocket, self).__init__(**kwargs)
 
 	def send(self, p):
 		# Hack: set the More Data flag so we can detect injected frames (and so clients stay awake longer)
@@ -139,7 +139,11 @@ class MitmSocket(L2Socket):
 			return self._strip_fcs(p)
 
 	def close(self):
-		super(MitmSocket, self).close()
+		super(MonitorSocket, self).close()
+
+# For backwards compatibility
+class MitmSocket(MonitorSocket):
+	pass
 
 def dot11_get_seqnum(p):
 	return p.SC >> 4
