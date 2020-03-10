@@ -17,43 +17,53 @@ def pn2bytes(pn):
 def pn2bin(pn):
 	return struct.pack(">Q", pn)[2:]
 
-def dot11_get_fc(p):
-	result = (p.proto << 2) + p.type
-	result = (result << 2) + p.subtype
-	return struct.pack("<BB", result, int(p.FCfield))
+def dot11ccmp_get_pn(p):
+	pn = p.PN5
+	pn = (pn << 8) | p.PN4
+	pn = (pn << 8) | p.PN3
+	pn = (pn << 8) | p.PN2
+	pn = (pn << 8) | p.PN1
+	pn = (pn << 8) | p.PN0
+	return pn
 
 def ccmp_get_nonce(priority, addr, pn):
 	return struct.pack("B", priority) + addr2bin(addr) + pn2bin(pn)
 
 def ccmp_get_aad(p):
-	fc = dot11_get_fc(p)
+	# FC field with masked values
+	fc = raw(p)[:2]
+	fc = struct.pack("<BB", fc[0] & 0x8f, fc[1] & 0xc7)
+
+	# Sequence number is masked, but fragment number is included
+	sc = struct.pack("<H", p.SC & 0xf)
+
 	addr1 = addr2bin(p.addr1)
 	addr2 = addr2bin(p.addr2)
 	addr3 = addr2bin(p.addr3)
+	aad = fc + addr1 + addr2 + addr3 + sc
+	if Dot11QoS in p:
+		# Everything except the TID is masked
+		aad += struct.pack("<H", p[Dot11QoS].TID)
 
-	# Sequence number is masked, but fragment number is included
-	sc = struct.pack("<H" , p.SC % 16)
-	return fc + addr1 + addr2 + addr3 + sc
+	return aad
 
 def Raw(x):
 	return x
 
-def encrypt_ccmp(p, tk, pn):
+def encrypt_ccmp(p, tk, pn, keyid=0):
 	"""Takes a plaintext Dot11 frame, encrypts it, and adds all the necessairy headers"""
 
-	# We currently don't support Dot11QoS frames
-	assert not Dot11QoS in p
-	p = p.copy()
-
 	# Update the FC field
+	p = p.copy()
 	p.FCfield |= Dot11(FCfield="protected").FCfield
-
-	# TODO: Mask flags that are not part of the AAD
-	fc = p.FCfield
-	payload = raw(p.payload)
-	p.remove_payload()
-	keyid = 0
-	priority = 0
+	if Dot11QoS in p:
+		payload = raw(p[Dot11QoS].payload)
+		p[Dot11QoS].remove_payload()
+		priority = p[Dot11QoS].TID
+	else:
+		payload = raw(p.payload)
+		p.remove_payload()
+		priority = 0
 
 	# Add the CCMP header. res0 and res1 are by default set to zero.
 	newp = p/Dot11CCMP()
@@ -65,11 +75,11 @@ def encrypt_ccmp(p, tk, pn):
 	# Generate the CCMP Header and AAD for encryption.
 	ccm_nonce = ccmp_get_nonce(priority, newp.addr2, pn)
 	ccm_aad = ccmp_get_aad(newp)
-	print("CCM Nonce:", ccm_nonce.hex())
-	print("CCM aad  :", ccm_aad.hex())
+	#print("CCM Nonce:", ccm_nonce.hex())
+	#print("CCM aad  :", ccm_aad.hex())
 
 	# Encrypt the plaintext using AES in CCM Mode.
-	print("Payload:", payload.hex())
+	#print("Payload:", payload.hex())
 	cipher = AES.new(tk, AES.MODE_CCM, ccm_nonce, mac_len=8)
 	cipher.update(ccm_aad)
 	ciphertext = cipher.encrypt(payload)
@@ -77,9 +87,40 @@ def encrypt_ccmp(p, tk, pn):
 	newp = newp/Raw(ciphertext)
 	newp = newp/Raw(digest)
 
-	print("Ciphertext:", ciphertext.hex())
-	print(repr(newp))
-	print(raw(newp).hex())
+	#print("Ciphertext:", ciphertext.hex())
+	#print(repr(newp))
+	#print(raw(newp).hex())
 
 	return newp
+
+def decrypt_ccmp(p, tk):
+	"""Takes a Dot11CCMP frame and decrypts it"""
+
+	# We currently don't support Dot11QoS frames
+	assert not Dot11QoS in p
+	p = p.copy()
+
+	# Get used CCMP parameters
+	keyid = p.key_id
+	priority = 0
+	pn = dot11ccmp_get_pn(p)
+
+	# TODO: Mask flags in p.FCfield that are not part of the AAD
+	fc = p.FCfield
+	payload = raw(p[Dot11CCMP].data)
+	p.remove_payload()
+
+	# Prepare for CCMP decryption
+	ccm_nonce = ccmp_get_nonce(priority, p.addr2, pn)
+	ccm_aad = ccmp_get_aad(p)
+
+	# Decrypt using AES in CCM Mode.
+	cipher = AES.new(tk, AES.MODE_CCM, ccm_nonce, mac_len=8)
+	cipher.update(ccm_aad)
+	plaintext = cipher.decrypt(payload[:-8])
+	cipher.verify(payload[-8:])
+
+	# TODO: Strip the protected bit from the frame?
+
+	return p/LLC(plaintext)
 
