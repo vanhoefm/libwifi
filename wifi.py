@@ -45,6 +45,16 @@ if not "Dot11Encrypted" in locals():
 	class Dot11TKIP():
 		pass
 
+#### Linux ####
+
+def get_device_driver(iface):
+	path = "/sys/class/net/%s/device/driver" % iface
+	try:
+		output = subprocess.check_output(["readlink", "-f", path])
+		return output.decode('utf-8').strip().split("/")[-1]
+	except:
+		return None
+
 #### Utility ####
 
 def get_mac_address(interface):
@@ -223,17 +233,6 @@ def get_ccmp_payload(p):
 	else:
 		return p[Raw].load
 
-def decrypt_ccmp(p, key):
-	payload   = get_ccmp_payload(p)
-	sendermac = p.addr2
-	priority  = dot11_get_priority(p)
-	iv        = dot11_get_iv(p)
-	pn        = struct.pack(">I", iv >> 16) + struct.pack(">H", iv & 0xFFFF)
-	nonce     = chr(priority) + sendermac.replace(':','').decode("hex") + pn
-	cipher    = AES.new(key, AES.MODE_CCM, nonce, mac_len=8)
-	plaintext = cipher.decrypt(payload)
-	return plaintext
-
 class IvInfo():
 	def __init__(self, p):
 		self.iv = dot11_get_iv(p)
@@ -268,5 +267,19 @@ class IvCollection():
 		if len(self.ivs) == 0: return True
 		return iv > max(self.ivs.keys())
 
+def create_fragments(header, data, num_frags):
+	data = raw(data)
+	fragments = []
+	fragsize = (len(data) + 1) // num_frags
+	for i in range(num_frags):
+		frag = header.copy()
+		frag.SC |= i
+		if i < num_frags - 1:
+			frag.FCfield |= Dot11(FCfield="MF").FCfield
 
+		payload = data[fragsize * i : fragsize * (i + 1)]
+		frag = frag/Raw(payload)
+		fragments.append(frag)
+
+	return fragments
 
