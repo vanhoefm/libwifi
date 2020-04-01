@@ -59,6 +59,9 @@ def encrypt_ccmp(p, tk, pn, keyid=0):
 	if Dot11QoS in p:
 		payload = raw(p[Dot11QoS].payload)
 		p[Dot11QoS].remove_payload()
+		# Explicitly set TID so we can assume it's an integer
+		if p[Dot11QoS].TID == None:
+			p[Dot11QoS].TID = 0
 		priority = p[Dot11QoS].TID
 	else:
 		payload = raw(p.payload)
