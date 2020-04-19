@@ -270,7 +270,7 @@ class IvCollection():
 def create_fragments(header, data, num_frags):
 	data = raw(data)
 	fragments = []
-	fragsize = (len(data) + 1) // num_frags
+	fragsize = (len(data) + num_frags - 1) // num_frags
 	for i in range(num_frags):
 		frag = header.copy()
 		frag.SC |= i
