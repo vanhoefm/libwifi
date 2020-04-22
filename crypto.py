@@ -4,8 +4,10 @@ from .wifi import *
 #from binascii import a2b_hex
 #from struct import unpack,pack
 
-from Crypto.Cipher import AES
+from Crypto.Cipher import AES, ARC4
 from scapy.layers.dot11 import Dot11, Dot11CCMP, Dot11QoS
+
+import zlib
 
 def pn2bytes(pn):
 	pn_bytes = [0] * 6
@@ -127,4 +129,33 @@ def decrypt_ccmp(p, tk):
 	# TODO: Strip the protected bit from the frame?
 
 	return p/LLC(plaintext)
+
+def encrypt_wep(p, key, pn, keyid=0):
+	"""Takes a plaintext Dot11 frame, encrypts it, and adds all the necessairy headers"""
+
+	# Update the FC field --- XXX share this with encrypt_ccmp
+	p = p.copy()
+	p.FCfield |= Dot11(FCfield="protected").FCfield
+	if Dot11QoS in p:
+		payload = raw(p[Dot11QoS].payload)
+		p[Dot11QoS].remove_payload()
+		# Explicitly set TID so we can assume it's an integer
+		if p[Dot11QoS].TID == None:
+			p[Dot11QoS].TID = 0
+		priority = p[Dot11QoS].TID
+	else:
+		payload = raw(p.payload)
+		p.remove_payload()
+		priority = 0
+
+	# Add the WEP ICV which will be encrypted
+	payload += struct.pack("<I", zlib.crc32(payload) & 0xffffffff)
+	iv = struct.pack(">I", pn)[1:]
+	cipher = ARC4.new(iv + key)
+	ciphertext = cipher.encrypt(payload)
+
+	# Construct packet ourselves to avoid scapy bugs
+	newp = p/iv/struct.pack("<B", keyid)/ciphertext
+
+	return newp
 
