@@ -71,10 +71,12 @@ class DHCP_sock(DHCP_am):
 		self.server_ip = kwargs["gw"]
 		super(DHCP_sock, self).__init__(**kwargs)
 
-	def prealloc_ip(self, clientmac):
+	def prealloc_ip(self, clientmac, ip=None):
 		"""Allocate an IP for the client before it send DHCP requests"""
 		if clientmac not in self.leases:
-			self.leases[clientmac] = self.pool.pop()
+			if ip == None:
+				ip = self.pool.pop()
+			self.leases[clientmac] = ip
 		return self.leases[clientmac]
 
 	def make_reply(self, req):
