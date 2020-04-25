@@ -219,7 +219,7 @@ def get_tlv_value(p, type):
 
 def dot11_get_priority(p):
 	if not Dot11QoS in p: return 0
-	return ord(str(p[Dot11QoS])[0])
+	return p[Dot11QoS].TID
 
 
 #### Crypto functions and util ####
