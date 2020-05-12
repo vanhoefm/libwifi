@@ -130,9 +130,9 @@ class MonitorSocket(L2Socket):
 	def _strip_fcs(self, p):
 		# Older scapy can't handle the optional Frame Check Sequence (FCS) field automatically
 		if p[RadioTap].present & 2 != 0 and not Dot11FCS in p:
-			rawframe = str(p[RadioTap])
+			rawframe = raw(p[RadioTap])
 			pos = 8
-			while ord(rawframe[pos - 1]) & 0x80 != 0: pos += 4
+			while orb(rawframe[pos - 1]) & 0x80 != 0: pos += 4
 
 			# If the TSFT field is present, it must be 8-bytes aligned
 			if p[RadioTap].present & 1 != 0:
@@ -140,8 +140,8 @@ class MonitorSocket(L2Socket):
 				pos += 8
 
 			# Remove FCS if present
-			if ord(rawframe[pos]) & 0x10 != 0:
-				return Dot11(str(p[Dot11])[:-4])
+			if orb(rawframe[pos]) & 0x10 != 0:
+				return Dot11(raw(p[Dot11])[:-4])
 
 		return p[Dot11]
 
