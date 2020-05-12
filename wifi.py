@@ -156,7 +156,7 @@ class MonitorSocket(L2Socket):
 
 		# Strip the FCS if present, and drop the RadioTap header
 		if Dot11FCS in p:
-			return p
+			return Dot11(raw(p[Dot11FCS])[:-4])
 		else:
 			return self._strip_fcs(p)
 
