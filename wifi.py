@@ -145,13 +145,17 @@ class MonitorSocket(L2Socket):
 
 		return p[Dot11]
 
-	def recv(self, x=MTU):
+	def recv(self, x=MTU, reflected=False):
 		p = L2Socket.recv(self, x)
 		if p == None or not (Dot11 in p or Dot11FCS in p):
 			return None
 
 		# Hack: ignore frames that we just injected and are echoed back by the kernel
 		if p.FCfield & 0x20 != 0:
+			return None
+
+		# Ignore reflection of injected frames. These have a small RadioTap header.
+		if not reflected and p[RadioTap].len <= 13:
 			return None
 
 		# Strip the FCS if present, and drop the RadioTap header
