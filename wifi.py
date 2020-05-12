@@ -63,6 +63,30 @@ def get_mac_address(interface):
 def addr2bin(addr):
 	return binascii.a2b_hex(addr.replace(':', ''))
 
+def get_channel(iface):
+	output = str(subprocess.check_output(["iw", iface, "info"]))
+	p = re.compile("channel (\d+)")
+	m = p.search(output)
+	if m == None: return None
+	return int(m.group(1))
+
+def get_channel(iface):
+	output = str(subprocess.check_output(["iw", iface, "info"]))
+	p = re.compile("channel (\d+)")
+	return int(p.search(output).group(1))
+
+def set_channel(iface, channel):
+	subprocess.check_output(["iw", iface, "set", "channel", str(channel)])
+
+def set_macaddress(iface, macaddr):
+	subprocess.check_output(["ifconfig", iface, "down"])
+	subprocess.check_output(["macchanger", "-m", macaddr, iface])
+
+def get_macaddress(iface):
+	"""This works even for interfaces in monitor mode."""
+	s = get_if_raw_hwaddr(iface)[1]
+	return ("%02x:" * 6)[:-1] % tuple(orb(x) for x in s)
+
 #### Packet Processing Functions ####
 
 class DHCP_sock(DHCP_am):
