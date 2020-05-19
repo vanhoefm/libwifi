@@ -32,6 +32,10 @@ def log(level, msg, color=None, showtime=True):
 	msg = (datetime.now().strftime('[%H:%M:%S] ') if showtime else " "*11) + COLORCODES.get(color, "") + msg + "\033[1;0m"
 	print(msg)
 
+def change_log_level(delta):
+	global global_log_level
+	global_log_level += delta
+
 #### Back-wards compatibility with older scapy
 
 if not "Dot11FCS" in locals():
@@ -86,6 +90,191 @@ def get_macaddress(iface):
 	"""This works even for interfaces in monitor mode."""
 	s = get_if_raw_hwaddr(iface)[1]
 	return ("%02x:" * 6)[:-1] % tuple(orb(x) for x in s)
+
+def get_iface_type(iface):
+	output = str(subprocess.check_output(["iw", iface, "info"]))
+	p = re.compile("type (\w+)")
+	return str(p.search(output).group(1))
+
+def set_monitor_mode(iface):
+	# Note: we let the user put the device in monitor mode, such that they can control optional
+	#       parameters such as "iw wlan0 set monitor active" for devices that support it.
+	if get_iface_type(iface) != "monitor":
+		# Some kernels (Debian jessie - 3.16.0-4-amd64) don't properly add the monitor interface. The following ugly
+		# sequence of commands assures the virtual interface is properly registered as a 802.11 monitor interface.
+		subprocess.check_output(["ifconfig", iface, "down"])
+		subprocess.check_output(["iw", iface, "set", "type", "monitor"])
+		time.sleep(0.5)
+		subprocess.check_output(["iw", iface, "set", "type", "monitor"])
+
+	subprocess.check_output(["ifconfig", iface, "up"])
+	subprocess.check_output(["ifconfig", iface, "mtu", "2200"])
+
+#### Injection Tests ####
+
+def get_nearby_ap_addr(sin):
+	# If this interface itself is also hosting an AP, the beacons transmitted by it might be
+	# returned as well. We filter these out by the condition `p.dBm_AntSignal != None`.
+	beacons = list(sniff(opened_socket=sin, timeout=0.5, lfilter=lambda p: (Dot11 in p or Dot11FCS in p) \
+									and p.type == 0 and p.subtype == 8 \
+									and p.dBm_AntSignal != None))
+	if len(beacons) == 0:
+		raise IOError("Unable to find nearby AP to test injection")
+	beacons.sort(key=lambda p: p.dBm_AntSignal, reverse=True)
+	return beacons[0].addr2, get_ssid(beacons[0])
+
+def inject_and_capture(sout, sin, p, count=0):
+	# Append unique label to recognize injected frame
+	label = b"AAAA" + struct.pack(">II", random.randint(0, 2**32), random.randint(0, 2**32))
+	toinject = p/Raw(label)
+	log(DEBUG, "Injecting test frame: " + repr(toinject))
+	sout.send(RadioTap()/toinject)
+
+	# 1. When using a 2nd interface: capture the actual packet that was injected in the air.
+	# 2. Not using 2nd interface: capture the "reflected" frame sent back by the kernel. This allows
+	#    us to at least detect if the kernel (and perhaps driver) is overwriting fields. It generally
+	#    doesn't allow us to detect if the device/firmware itself is overwriting fields.
+	packets = sniff(opened_socket=sin, timeout=1, count=count, lfilter=lambda p: p != None and label in raw(p))
+
+	return packets
+
+def test_packet_injection(sout, sin, p, test_func=None):
+	"""Check if given property holds of all injected frames"""
+	packets = inject_and_capture(sout, sin, p, count=1)
+	if len(packets) < 1:
+		raise IOError("Unable to inject test frame. Are you using the correct channel/driver/device/..?")
+	return all([test_func(cap) for cap in packets])
+
+def test_injection_fields(sout, sin, ref, strtype):
+	bad_inject = False
+
+	p = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, addr3=ref.addr3, type=2, SC=30<<4)/LLC()/SNAP()/EAPOL()/EAP()
+	if not test_packet_injection(sout, sin, p, lambda cap: EAPOL in cap):
+		log(STATUS, "    Unable to inject EAPOL frames!")
+		bad_inject = True
+
+	p = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, addr3=ref.addr3, type=2, SC=30<<4)
+	if not test_packet_injection(sout, sin, p, lambda cap: cap.SC == p.SC):
+		log(STATUS, "    Sequence number of injected frames is being overwritten!")
+		bad_inject = True
+
+	p = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, addr3=ref.addr3, type=2, SC=(30<<4)|1)
+	if not test_packet_injection(sout, sin, p, lambda cap: (cap.SC & 0xf) == 1):
+		log(STATUS, "    Fragment number of injected frames is being overwritten!")
+		bad_inject = True
+
+	p = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, addr3=ref.addr3, type=2, subtype=8, SC=30<<4)/Dot11QoS(TID=2)
+	if not test_packet_injection(sout, sin, p, lambda cap: cap.TID == p.TID):
+		log(STATUS, "    QoS TID of injected frames is being overwritten!")
+		bad_inject = True
+
+	if bad_inject:
+		log(ERROR, f"[-] Some fields are overwritten when injected using {strtype}.")
+	else:
+		log(STATUS, f"[+] All tested fields are properly injected when using {strtype}.", color="green")
+
+def test_injection_order(sout, sin, ref, strtype):
+	label = b"AAAA" + struct.pack(">II", random.randint(0, 2**32), random.randint(0, 2**32))
+	p2 = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, type=2, subtype=8, SC=33)/Dot11QoS(TID=2)
+	p6 = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, type=2, subtype=8, SC=33)/Dot11QoS(TID=6)
+
+	# First frame causes Tx queue to be busy. Next two frames tests if frames are reordered.
+	for p in [p2, p2, p2, p6]:
+		sout.send(RadioTap()/p/Raw(label))
+
+	packets = sniff(opened_socket=sin, timeout=1, lfilter=lambda p: Dot11QoS in p and label in raw(p))
+	tids = [p[Dot11QoS].TID for p in packets]
+	log(STATUS, "Captured TIDs: " + str(tids))
+
+	# Sanity check the captured TIDs, and then analyze the results
+	if not (2 in tids and 6 in tids):
+		log(ERROR, f"[-] We didn't capture all injected QoS TID frames. Please restart the test.")
+	elif tids != sorted(tids):
+		log(ERROR, f"[-] Frames with different QoS TIDs are reordered during injection with {strtype}.")
+	else:
+		log(STATUS, f"[+] Frames with different QoS TIDs are not reordered during injection with {strtype}.", color="green")
+
+def test_injection_fragment(sout, sin, ref):
+	p = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, type=2, subtype=8, SC=33<<4)
+	p = p/Dot11QoS(TID=2)/LLC()/SNAP()/EAPOL()/EAP()
+	p.FCfield |= Dot11(FCfield="MF").FCfield
+	captured = inject_and_capture(sout, sin, p, count=1)
+	if len(captured) == 0:
+		log(ERROR, "[-] Unable to inject fragmented frames using (partly) valid MAC addresses. Other tests might fail too.")
+	else:
+		log(STATUS, "[+] Fragmented frames using (partly) valid MAC addresses can be injected.", color="green")
+
+def test_injection_ack(sout, sin, addr1, addr2):
+	suspicious = False
+
+	# Test number of retransmissions
+	p = Dot11(addr1="00:11:00:00:02:01", addr2="00:11:00:00:02:01", type=2, SC=33<<4)
+	num = len(inject_and_capture(sout, sin, p))
+	log(STATUS, f"Injected frames seem to be (re)transitted {num} times")
+	if num == 1:
+		log(WARNING, "Injected frames don't seem to be retransmitted!")
+		suspicious = True
+
+	# Test ACK towards an unassigned MAC address
+	p = Dot11(FCfield="to-DS", addr1=addr1, addr2="00:22:00:00:00:01", type=2, SC=33<<4)
+	num = len(inject_and_capture(sout, sin, p))
+	log(STATUS, f"Captured {num} (re)transmitted frames to the AP when using a spoofed sender address")
+	if num > 2:
+		log(STATUS, "  => Acknowledged frames with a spoofed sender address are still retransmitted. This has low impact.")
+
+	# Test ACK towards an assigned MAC address
+	p = Dot11(FCfield="to-DS", addr1=addr1, addr2=addr2, type=2, SC=33<<4)
+	num = len(inject_and_capture(sout, sin, p))
+	log(STATUS, f"Captured {num} (re)transmitted frames to the AP when using the real sender address")
+	if num > 2:
+		log(STATUS, "  => Acknowledged frames with real sender address are still retransmitted. This might impact time-sensitive tests.")
+		suspicious = True
+
+	if suspicious:
+		log(WARNING, "[-] Retransmission behaviour does not appear ideal. Note that this test can be unreliable.")
+	else:
+		log(STATUS, "[+] Retransmission behaviour appears good. Note that this test can be unreliable.", color="green")
+
+def test_injection(iface_out, iface_in=None, peermac=None):
+	# We start monitoring iface_in already so injected frame won't be missed
+	sout = L2Socket(type=ETH_P_ALL, iface=iface_out)
+	log(STATUS, f"Injection test: using {iface_out} to inject frames")
+	if iface_in == None:
+		log(STATUS, f"Injection test: using {iface_out} to capture frames")
+		sin = sout
+	else:
+		log(STATUS, f"Injection test: using {iface_in} to capture frames")
+		sin = L2Socket(type=ETH_P_ALL, iface=iface_in)
+
+	# Get own MAC address for tests and construct reference headers
+	ownmac = get_macaddress(sout.iface)
+	spoofed = Dot11(addr1="00:11:00:00:02:01", addr2="00:22:00:00:02:01")
+	valid = Dot11(addr1=peermac, addr2=ownmac)
+
+	# This tests basic injection capabilities
+	test_injection_fragment(sout, sin, valid)
+
+	# Perform some actual injection tests
+	test_injection_fields(sout, sin, spoofed, "spoofed MAC addresses")
+	test_injection_fields(sout, sin, valid, "(partly) valid MAC addresses")
+	test_injection_order(sout, sin, spoofed, "spoofed MAC addresses")
+	test_injection_order(sout, sin, valid, "(partly) valid MAC addresses")
+
+	# Acknowledgement behaviour tests
+	if iface_in != None:
+		# We search for an AP on the interface that injects frames because:
+		# 1. In mixed managed/monitor mode, we will otherwise detect our own AP on the sout interface
+		# 2. If sout interface "sees" the AP this assure it will also receive its ACK frames
+		# 3. The given peermac might be a client that goes into sleep mode
+		channel = get_channel(sin.iface)
+		log(STATUS, f"Searching for AP on channel {channel} to test ACK behaviour.")
+		apmac, ssid = get_nearby_ap_addr(sout)
+		log(STATUS, f"Testing ACK behaviour by injecting frames to AP {ssid} ({peermac}).")
+
+		test_injection_ack(sout, sin, addr1=apmac, addr2=ownmac)
+
+	sout.close()
+	sin.close()
 
 #### Packet Processing Functions ####
 
@@ -312,4 +501,19 @@ def create_fragments(header, data, num_frags):
 		fragments.append(frag)
 
 	return fragments
+
+def get_element(el, id):
+	el = el[Dot11Elt]
+	while not el is None:
+		if el.ID == id:
+			return el
+		el = el.payload
+	return None
+
+def get_ssid(beacon):
+	if not (Dot11 in beacon or Dot11FCS in beacon): return
+	if Dot11Elt not in beacon: return
+	if beacon[Dot11].type != 0 and beacon[Dot11].subtype != 8: return
+	el = get_element(beacon, 0)
+	return el.info.decode()
 
