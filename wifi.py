@@ -142,7 +142,7 @@ def test_packet_injection(sout, sin, p, test_func=None):
 	"""Check if given property holds of all injected frames"""
 	packets = inject_and_capture(sout, sin, p, count=1)
 	if len(packets) < 1:
-		raise IOError("Unable to inject test frame. Are you using the correct channel/driver/device/..?")
+		raise IOError("Unable to inject test frame. Could be due to background noise or channel/driver/device/..")
 	return all([test_func(cap) for cap in packets])
 
 def test_injection_fields(sout, sin, ref, strtype):
@@ -200,7 +200,7 @@ def test_injection_fragment(sout, sin, ref):
 	p.FCfield |= Dot11(FCfield="MF").FCfield
 	captured = inject_and_capture(sout, sin, p, count=1)
 	if len(captured) == 0:
-		log(ERROR, "[-] Unable to inject fragmented frames using (partly) valid MAC addresses. Other tests might fail too.")
+		log(ERROR, "[-] Unable to inject fragmented frame using (partly) valid MAC addresses. Other tests might fail too.")
 	else:
 		log(STATUS, "[+] Fragmented frames using (partly) valid MAC addresses can be injected.", color="green")
 
@@ -211,7 +211,7 @@ def test_injection_ack(sout, sin, addr1, addr2):
 	p = Dot11(addr1="00:11:00:00:02:01", addr2="00:11:00:00:02:01", type=2, SC=33<<4)
 	num = len(inject_and_capture(sout, sin, p))
 	log(STATUS, f"Injected frames seem to be (re)transitted {num} times")
-	if num == 1:
+	if num <= 1:
 		log(WARNING, "Injected frames don't seem to be retransmitted!")
 		suspicious = True
 
@@ -231,19 +231,22 @@ def test_injection_ack(sout, sin, addr1, addr2):
 		suspicious = True
 
 	if suspicious:
-		log(WARNING, "[-] Retransmission behaviour does not appear ideal. Note that this test can be unreliable.")
+		log(WARNING, "[-] Retransmission behaviour isn't ideal. This test can be unreliable (e.g. due to background noise).")
 	else:
-		log(STATUS, "[+] Retransmission behaviour appears good. Note that this test can be unreliable.", color="green")
+		log(STATUS, "[+] Retransmission behaviour is good. This test can be unreliable (e.g. due to background noise).", color="green")
 
 def test_injection(iface_out, iface_in=None, peermac=None):
 	# We start monitoring iface_in already so injected frame won't be missed
 	sout = L2Socket(type=ETH_P_ALL, iface=iface_out)
-	log(STATUS, f"Injection test: using {iface_out} to inject frames")
+	driver_out = get_device_driver(iface_out)
+	log(STATUS, f"Injection test: using {iface_out} ({driver_out}) to inject frames")
 	if iface_in == None:
-		log(STATUS, f"Injection test: using {iface_out} to capture frames")
+		log(WARNING, f"Injection selftest: also using {iface_out} to capture frames. This means the tests can detect if the kernel")
+		log(WARNING, f"                    interferes with injection, but it cannot check the behaviour of the device itself.")
 		sin = sout
 	else:
-		log(STATUS, f"Injection test: using {iface_in} to capture frames")
+		driver_in = get_device_driver(iface_in)
+		log(STATUS, f"Injection test: using {iface_in} ({driver_in}) to capture frames")
 		sin = L2Socket(type=ETH_P_ALL, iface=iface_in)
 
 	# Get own MAC address for tests and construct reference headers
@@ -269,7 +272,7 @@ def test_injection(iface_out, iface_in=None, peermac=None):
 		channel = get_channel(sin.iface)
 		log(STATUS, f"Searching for AP on channel {channel} to test ACK behaviour.")
 		apmac, ssid = get_nearby_ap_addr(sout)
-		log(STATUS, f"Testing ACK behaviour by injecting frames to AP {ssid} ({peermac}).")
+		log(STATUS, f"Testing ACK behaviour by injecting frames to AP {ssid} ({apmac}).")
 
 		test_injection_ack(sout, sin, addr1=apmac, addr2=ownmac)
 
