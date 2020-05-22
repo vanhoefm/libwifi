@@ -213,12 +213,16 @@ def test_injection_fragment(sout, sin, ref):
 
 def test_injection_ack(sout, sin, addr1, addr2):
 	suspicious = False
+	test_fail = False
 
 	# Test number of retransmissions
 	p = Dot11(addr1="00:11:00:00:02:01", addr2="00:11:00:00:02:01", type=2, SC=33<<4)
 	num = len(inject_and_capture(sout, sin, p))
 	log(STATUS, f"Injected frames seem to be (re)transitted {num} times")
-	if num <= 1:
+	if num == 0:
+		log(ERROR, "Couldn't capture injected frame. Please restart the test.")
+		test_fail = True
+	elif num == 1:
 		log(WARNING, "Injected frames don't seem to be retransmitted!")
 		suspicious = True
 
@@ -226,6 +230,9 @@ def test_injection_ack(sout, sin, addr1, addr2):
 	p = Dot11(FCfield="to-DS", addr1=addr1, addr2="00:22:00:00:00:01", type=2, SC=33<<4)
 	num = len(inject_and_capture(sout, sin, p))
 	log(STATUS, f"Captured {num} (re)transmitted frames to the AP when using a spoofed sender address")
+	if num == 0:
+		log(ERROR, "Couldn't capture injected frame. Please restart the test.")
+		test_fail = True
 	if num > 2:
 		log(STATUS, "  => Acknowledged frames with a spoofed sender address are still retransmitted. This has low impact.")
 
@@ -233,13 +240,16 @@ def test_injection_ack(sout, sin, addr1, addr2):
 	p = Dot11(FCfield="to-DS", addr1=addr1, addr2=addr2, type=2, SC=33<<4)
 	num = len(inject_and_capture(sout, sin, p))
 	log(STATUS, f"Captured {num} (re)transmitted frames to the AP when using the real sender address")
-	if num > 2:
+	if num == 0:
+		log(ERROR, "Couldn't capture injected frame. Please restart the test.")
+		test_fail = True
+	elif num > 2:
 		log(STATUS, "  => Acknowledged frames with real sender address are still retransmitted. This might impact time-sensitive tests.")
 		suspicious = True
 
 	if suspicious:
 		log(WARNING, "[-] Retransmission behaviour isn't ideal. This test can be unreliable (e.g. due to background noise).")
-	else:
+	elif not test_fail:
 		log(STATUS, "[+] Retransmission behaviour is good. This test can be unreliable (e.g. due to background noise).", color="green")
 
 def test_injection(iface_out, iface_in=None, peermac=None):
