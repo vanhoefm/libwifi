@@ -119,7 +119,7 @@ def get_nearby_ap_addr(sin):
 									and p.type == 0 and p.subtype == 8 \
 									and p.dBm_AntSignal != None))
 	if len(beacons) == 0:
-		raise IOError("Unable to find nearby AP to test injection")
+		return None, None
 	beacons.sort(key=lambda p: p.dBm_AntSignal, reverse=True)
 	return beacons[0].addr2, get_ssid(beacons[0])
 
@@ -129,6 +129,13 @@ def inject_and_capture(sout, sin, p, count=0):
 	toinject = p/Raw(label)
 	log(DEBUG, "Injecting test frame: " + repr(toinject))
 	sout.send(RadioTap()/toinject)
+
+	# TODO:Move this to a shared socket interface?
+	# Note: this workaround for Intel is only needed if the fragmented frame is injected using
+	#       valid MAC addresses. But for simplicity just execute it after any fragmented frame.
+	if sout.intel_mf_workaround and toinject.FCfield & Dot11(FCfield="MF").FCfield != 0:
+		sout.send(RadioTap()/Dot11())
+		log(DEBUG, "Sending dummy frame after injecting frame with MF flag set")
 
 	# 1. When using a 2nd interface: capture the actual packet that was injected in the air.
 	# 2. Not using 2nd interface: capture the "reflected" frame sent back by the kernel. This allows
@@ -182,7 +189,7 @@ def test_injection_order(sout, sin, ref, strtype):
 	for p in [p2, p2, p2, p6]:
 		sout.send(RadioTap()/p/Raw(label))
 
-	packets = sniff(opened_socket=sin, timeout=1, lfilter=lambda p: Dot11QoS in p and label in raw(p))
+	packets = sniff(opened_socket=sin, timeout=1.5, lfilter=lambda p: Dot11QoS in p and label in raw(p))
 	tids = [p[Dot11QoS].TID for p in packets]
 	log(STATUS, "Captured TIDs: " + str(tids))
 
@@ -239,6 +246,9 @@ def test_injection(iface_out, iface_in=None, peermac=None):
 	# We start monitoring iface_in already so injected frame won't be missed
 	sout = L2Socket(type=ETH_P_ALL, iface=iface_out)
 	driver_out = get_device_driver(iface_out)
+	# Use the Intel workaround if needed
+	sout.intel_mf_workaround = driver_out == "iwlwifi"
+
 	log(STATUS, f"Injection test: using {iface_out} ({driver_out}) to inject frames")
 	if iface_in == None:
 		log(WARNING, f"Injection selftest: also using {iface_out} to capture frames. This means the tests can detect if the kernel")
@@ -272,8 +282,12 @@ def test_injection(iface_out, iface_in=None, peermac=None):
 		channel = get_channel(sin.iface)
 		log(STATUS, f"Searching for AP on channel {channel} to test ACK behaviour.")
 		apmac, ssid = get_nearby_ap_addr(sout)
-		log(STATUS, f"Testing ACK behaviour by injecting frames to AP {ssid} ({apmac}).")
-
+		if apmac == None and peermac == None:
+			raise IOError("Unable to find nearby AP to test injection")
+		elif apmac ==None:
+			log(STATUS, f"Unable to find AP. Testing ACK behaviour with peer {peermac}.")
+		else:
+			log(STATUS, f"Testing ACK behaviour by injecting frames to AP {ssid} ({apmac}).")
 		test_injection_ack(sout, sin, addr1=apmac, addr2=ownmac)
 
 	sout.close()
