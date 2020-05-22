@@ -359,12 +359,14 @@ class ARP_sock(ARP_am):
 #### Packet Processing Functions ####
 
 class MonitorSocket(L2Socket):
-	def __init__(self, **kwargs):
+	def __init__(self, detect_injected=False, **kwargs):
 		super(MonitorSocket, self).__init__(**kwargs)
+		self.detect_injected = detect_injected
 
 	def send(self, p):
 		# Hack: set the More Data flag so we can detect injected frames (and so clients stay awake longer)
-		p.FCfield |= 0x20
+		if self.detect_injected:
+			p.FCfield |= 0x20
 		L2Socket.send(self, RadioTap()/p)
 
 	def _strip_fcs(self, p):
@@ -391,7 +393,7 @@ class MonitorSocket(L2Socket):
 			return None
 
 		# Hack: ignore frames that we just injected and are echoed back by the kernel
-		if p.FCfield & 0x20 != 0:
+		if self.detect_injected and p.FCfield & 0x20 != 0:
 			return None
 
 		# Ignore reflection of injected frames. These have a small RadioTap header.
