@@ -546,7 +546,7 @@ def get_ssid(beacon):
 	el = get_element(beacon, 0)
 	return el.info.decode()
 
-def create_msdu_subframe(src, dst, payload):
+def create_msdu_subframe(src, dst, payload, last=False):
 	length = len(payload)
 	p = Ether(dst=dst, src=src, type=length)
 
@@ -554,7 +554,7 @@ def create_msdu_subframe(src, dst, payload):
 
 	total_length = len(p) + len(payload)
 	padding = ""
-	if total_length % 4 != 0:
+	if not last and total_length % 4 != 0:
 		padding = b"\x00" * (4 - (total_length % 4))
 
 	return p / payload / Raw(padding)
