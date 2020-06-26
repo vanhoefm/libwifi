@@ -77,7 +77,10 @@ def get_channel(iface):
 def get_channel(iface):
 	output = str(subprocess.check_output(["iw", iface, "info"]))
 	p = re.compile("channel (\d+)")
-	return int(p.search(output).group(1))
+	m = p.search(output)
+	if m == None:
+		return None
+	return int(m.group(1))
 
 def set_channel(iface, channel):
 	subprocess.check_output(["iw", iface, "set", "channel", str(channel)])
