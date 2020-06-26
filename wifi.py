@@ -111,7 +111,7 @@ def set_monitor_mode(iface):
 		subprocess.check_output(["iw", iface, "set", "type", "monitor"])
 
 	subprocess.check_output(["ifconfig", iface, "up"])
-	subprocess.check_output(["ifconfig", iface, "mtu", "2200"])
+	subprocess.check_output(["ifconfig", iface, "mtu", "1500"])
 
 #### Injection Tests ####
 
