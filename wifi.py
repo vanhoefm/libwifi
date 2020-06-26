@@ -152,7 +152,7 @@ def test_packet_injection(sout, sin, p, test_func=None):
 	"""Check if given property holds of all injected frames"""
 	packets = inject_and_capture(sout, sin, p, count=1)
 	if len(packets) < 1:
-		raise IOError("Unable to inject test frame. Could be due to background noise or channel/driver/device/..")
+		raise IOError("Unable to inject frame. Check driver/device or background noise (and try on another channel)")
 	return all([test_func(cap) for cap in packets])
 
 def test_injection_fields(sout, sin, ref, strtype):
@@ -297,11 +297,13 @@ def test_injection(iface_out, iface_in=None, peermac=None):
 		apmac, ssid = get_nearby_ap_addr(sout)
 		if apmac == None and peermac == None:
 			raise IOError("Unable to find nearby AP to test injection")
-		elif apmac ==None:
-			log(STATUS, f"Unable to find AP. Testing ACK behaviour with peer {peermac}.")
+		elif apmac == None:
+			log(WARNING, f"Unable to find AP. Try a different channel? Testing ACK behaviour with peer {peermac}.")
+			destmac = peermac
 		else:
 			log(STATUS, f"Testing ACK behaviour by injecting frames to AP {ssid} ({apmac}).")
-		test_injection_ack(sout, sin, addr1=apmac, addr2=ownmac)
+			destmac = apmac
+		test_injection_ack(sout, sin, addr1=destmac, addr2=ownmac)
 
 	sout.close()
 	sin.close()
