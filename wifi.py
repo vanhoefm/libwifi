@@ -219,7 +219,7 @@ def test_injection_ack(sout, sin, addr1, addr2):
 	test_fail = False
 
 	# Test number of retransmissions
-	p = Dot11(addr1="00:11:00:00:02:01", addr2="00:11:00:00:02:01", type=2, SC=33<<4)
+	p = Dot11(FCfield="to-DS", addr1="00:11:00:00:02:01", addr2="00:11:00:00:02:01", type=2, SC=33<<4)
 	num = len(inject_and_capture(sout, sin, p))
 	log(STATUS, f"Injected frames seem to be (re)transitted {num} times")
 	if num == 0:
@@ -255,7 +255,7 @@ def test_injection_ack(sout, sin, addr1, addr2):
 	elif not test_fail:
 		log(STATUS, "[+] Retransmission behaviour is good. This test can be unreliable (e.g. due to background noise).", color="green")
 
-def test_injection(iface_out, iface_in=None, peermac=None):
+def test_injection(iface_out, iface_in=None, peermac=None, ownmac=None):
 	# We start monitoring iface_in already so injected frame won't be missed
 	sout = L2Socket(type=ETH_P_ALL, iface=iface_out)
 	driver_out = get_device_driver(iface_out)
@@ -272,15 +272,25 @@ def test_injection(iface_out, iface_in=None, peermac=None):
 		log(STATUS, f"Injection test: using {iface_in} ({driver_in}) to capture frames")
 		sin = L2Socket(type=ETH_P_ALL, iface=iface_in)
 
-	# Get own MAC address for tests and construct reference headers
-	ownmac = get_macaddress(sout.iface)
-	spoofed = Dot11(addr1="00:11:00:00:02:01", addr2="00:22:00:00:02:01")
-	valid = Dot11(addr1=peermac, addr2=ownmac)
+	# Injection using the "own" MAC address is mainly a problem when using a second virtual
+	# interface for injection when the first interface is used as client or AP. We want to
+	# test injection when using the MAC address of the client or AP. The caller should supply
+	# this address because the MAC address of the second virtual interface may be different
+	# from the MAC address used by the client or AP. Only use the MAC address of sout.iface
+	# if no "own" address is supplied by the caller.
+	if ownmac == None:
+		ownmac = get_macaddress(sout.iface)
+
+	# Some devices only properly inject frames when either the to-DS or from-DS flag is set,
+	# so set one of them as well.
+	spoofed = Dot11(FCfield="from-DS", addr1="00:11:00:00:02:01", addr2="00:22:00:00:02:01")
+	valid = Dot11(FCfield="from-DS", addr1=peermac, addr2=ownmac)
 
 	# This tests basic injection capabilities
 	test_injection_fragment(sout, sin, valid)
 
 	# Perform some actual injection tests
+	# TODO: If test_packet_injection raises an exception, we want to know on which test this was
 	test_injection_fields(sout, sin, spoofed, "spoofed MAC addresses")
 	test_injection_fields(sout, sin, valid, "(partly) valid MAC addresses")
 	test_injection_order(sout, sin, spoofed, "spoofed MAC addresses")
