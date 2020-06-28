@@ -119,7 +119,7 @@ def test_injection_order(sout, sin, ref, strtype, retries=1):
 
 		# Sanity check the captured TIDs, and then analyze the results
 		if not (2 in tids and 6 in tids):
-			log(STATUS,  f"    We didn't capture all injected QoS TID frames, retrying.")
+			log(STATUS,  f"We didn't capture all injected QoS TID frames, retrying.")
 		else:
 			break
 
