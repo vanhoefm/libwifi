@@ -105,8 +105,8 @@ def test_injection_order(sout, sin, ref, strtype, retries=1):
 	log(STATUS, f"--- Testing order of injected QoS frames using {strtype}")
 
 	label = b"AAAA" + struct.pack(">II", random.randint(0, 2**32), random.randint(0, 2**32))
-	p2 = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, type=2, subtype=8, SC=33)/Dot11QoS(TID=2)
-	p6 = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, type=2, subtype=8, SC=33)/Dot11QoS(TID=6)
+	p2 = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, type=2, subtype=8, SC=33<<4)/Dot11QoS(TID=2)
+	p6 = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, type=2, subtype=8, SC=33<<4)/Dot11QoS(TID=6)
 
 	for i in range(retries + 1):
 		# First frame causes Tx queue to be busy. Next two frames tests if frames are reordered.
@@ -192,13 +192,11 @@ def test_injection(iface_out, iface_in=None, peermac=None, ownmac=None):
 	# Print out what we are tested. Abort if the driver is known not to support a self-test.
 	log(STATUS, f"Injection test: using {iface_out} ({driver_out}) to inject frames")
 	if iface_in == None:
-		if driver_out in ["mt76x2u"]:
-			log(ERROR, "The driver {driver_out} does not support an injection selftest.")
-			return
-
 		log(WARNING, f"Injection selftest: also using {iface_out} to capture frames. This means the tests can detect if the kernel")
 		log(WARNING, f"                    interferes with injection, but it cannot check the behaviour of the device itself.")
-		if not driver_out in ["iwlwifi", "ath9k_htc"]:
+		if driver_out in ["mt76x2u"]:
+			log(WARNING, f"                    WARNING: self-test with the {driver_out} driver can be unreliable.")
+		elif not driver_out in ["iwlwifi", "ath9k_htc"]:
 			log(WARNING, f"                    WARNING: it is unknown whether a self-test works with the {driver_out} driver.")
 
 		sin = sout
