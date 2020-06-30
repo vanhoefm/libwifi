@@ -177,7 +177,7 @@ class MonitorSocket(L2Socket):
 		# Hack: set the More Data flag so we can detect injected frames (and so clients stay awake longer)
 		if self.detect_injected:
 			p.FCfield |= 0x20
-		L2Socket.send(self, RadioTap()/p)
+		L2Socket.send(self, RadioTap(present="TXFlags", TXFlags="NOSEQ+ORDER")/p)
 
 	def _strip_fcs(self, p):
 		# Older scapy can't handle the optional Frame Check Sequence (FCS) field automatically

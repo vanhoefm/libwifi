@@ -29,13 +29,13 @@ def inject_and_capture(sout, sin, p, count=0, retries=1):
 	attempt = 0
 	while True:
 		log(DEBUG, "Injecting test frame: " + repr(toinject))
-		sout.send(RadioTap()/toinject)
+		sout.send(RadioTap(present="TXFlags", TXFlags="NOSEQ+ORDER")/toinject)
 
 		# TODO:Move this to a shared socket interface?
 		# Note: this workaround for Intel is only needed if the fragmented frame is injected using
 		#       valid MAC addresses. But for simplicity just execute it after any fragmented frame.
 		if sout.mf_workaround and toinject.FCfield & Dot11(FCfield="MF").FCfield != 0:
-			sout.send(RadioTap()/Dot11())
+			sout.send(RadioTap(present="TXFlags", TXFlags="NOSEQ+ORDER")/Dot11())
 			log(DEBUG, "Sending dummy frame after injecting frame with MF flag set")
 
 		# 1. When using a 2nd interface: capture the actual packet that was injected in the air.
@@ -111,7 +111,7 @@ def test_injection_order(sout, sin, ref, strtype, retries=1):
 	for i in range(retries + 1):
 		# First frame causes Tx queue to be busy. Next two frames tests if frames are reordered.
 		for p in [p2, p2, p2, p6]:
-			sout.send(RadioTap()/p/Raw(label))
+			sout.send(RadioTap(present="TXFlags", TXFlags="NOSEQ+ORDER")/p/Raw(label))
 
 		packets = sniff(opened_socket=sin, timeout=1.5, lfilter=lambda p: Dot11QoS in p and label in raw(p))
 		tids = [p[Dot11QoS].TID for p in packets]
