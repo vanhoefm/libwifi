@@ -168,6 +168,10 @@ class ARP_sock(ARP_am):
 
 #### Packet Processing Functions ####
 
+# Compatibility with older Scapy versions
+if not "ORDER" in scapy.layers.dot11._rt_txflags:
+	scapy.layers.dot11._rt_txflags.append("ORDER")
+
 class MonitorSocket(L2Socket):
 	def __init__(self, detect_injected=False, **kwargs):
 		super(MonitorSocket, self).__init__(**kwargs)
