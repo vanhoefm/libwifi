@@ -62,9 +62,9 @@ def test_injection_fragment(sout, sin, ref):
 	p.FCfield |= Dot11(FCfield="MF").FCfield
 	captured = inject_and_capture(sout, sin, p, count=1)
 	if len(captured) == 0:
-		log(ERROR,  "[-] Unable to inject fragmented frame using (partly) valid MAC addresses. Other tests might fail too.")
+		log(ERROR,  "[-] Unable to inject frame with More Fragment flag using (partly) valid MAC addresses.")
 	else:
-		log(STATUS, "[+] Fragmented frames using (partly) valid MAC addresses can be injected.", color="green")
+		log(STATUS, "[+] Frame with More Fragment flag using (partly) valid MAC addresses can be injected.", color="green")
 	return FLAG_FAIL if len(captured) == 0 else 0
 
 def test_packet_injection(sout, sin, p, test_func, frametype, msgfail):
@@ -74,8 +74,9 @@ def test_packet_injection(sout, sin, p, test_func, frametype, msgfail):
 		log(ERROR,   f"[-] Unable to capture injected {frametype}.")
 		return FLAG_NOCAPTURE
 	if not all([test_func(cap) for cap in packets]):
-		log(ERROR,   f"[-] {msgfail}")
+		log(ERROR,   f"[-] " + msgfail.format(frametype=frametype))
 		return FLAG_FAIL
+	log(STATUS, f"    Properly captured injected {frametype}.")
 	return 0
 
 def test_injection_fields(sout, sin, ref, strtype):
@@ -84,19 +85,19 @@ def test_injection_fields(sout, sin, ref, strtype):
 
 	p = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, addr3=ref.addr3, type=2, SC=30<<4)/LLC()/SNAP()/EAPOL()/EAP()
 	status |= test_packet_injection(sout, sin, p, lambda cap: EAPOL in cap, f"EAPOL frame with {strtype}",
-					f"Scapy thinks injected EAPOL frame with {strtype} is a different frame?")
+					"Scapy thinks injected {frametype} is a different frame?")
 
-	p = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, addr3=ref.addr3, type=2, SC=30<<4)
+	p = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, addr3=ref.addr3, type=2, SC=31<<4)
 	status |= test_packet_injection(sout, sin, p, lambda cap: cap.SC == p.SC, f"empty data frame with {strtype}",
-					f"Sequence number of injected frames with {strtype} is being overwritten!")
+					"Sequence number of injected {frametype} is being overwritten!")
 
-	p = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, addr3=ref.addr3, type=2, SC=(30<<4)|1)
+	p = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, addr3=ref.addr3, type=2, SC=(32<<4)|1)
 	status |= test_packet_injection(sout, sin, p, lambda cap: (cap.SC & 0xf) == 1, f"fragmented empty data frame with {strtype}",
-					f"Fragment number of injected frames with {strtype} is being overwritten!")
+					"Fragment number of injected {frametype} is being overwritten!")
 
-	p = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, addr3=ref.addr3, type=2, subtype=8, SC=30<<4)/Dot11QoS(TID=2)
+	p = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, addr3=ref.addr3, type=2, subtype=8, SC=33<<4)/Dot11QoS(TID=2)
 	status |= test_packet_injection(sout, sin, p, lambda cap: cap.TID == p.TID, f"empty QoS data frame with {strtype}",
-					f"QoS TID of injected frames with {strtype} is being overwritten!")
+					"QoS TID of injected {frametype} is being overwritten!")
 
 	if status == 0: log(STATUS, f"[+] All tested fields are properly injected when using {strtype}.", color="green")
 	return status
@@ -110,7 +111,7 @@ def test_injection_order(sout, sin, ref, strtype, retries=1):
 
 	for i in range(retries + 1):
 		# First frame causes Tx queue to be busy. Next two frames tests if frames are reordered.
-		for p in [p2, p2, p2, p6]:
+		for p in [p2] * 4 + [p6]:
 			sout.send(RadioTap(present="TXFlags", TXFlags="NOSEQ+ORDER")/p/Raw(label))
 
 		packets = sniff(opened_socket=sin, timeout=1.5, lfilter=lambda p: Dot11QoS in p and label in raw(p))
