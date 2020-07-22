@@ -86,8 +86,10 @@ def set_channel(iface, channel):
 	subprocess.check_output(["iw", iface, "set", "channel", str(channel)])
 
 def set_macaddress(iface, macaddr):
-	subprocess.check_output(["ifconfig", iface, "down"])
-	subprocess.check_output(["macchanger", "-m", macaddr, iface])
+	# macchanger throws an error if the interface already has the given MAC address
+	if get_macaddress(iface) != macaddr:
+		subprocess.check_output(["ifconfig", iface, "down"])
+		subprocess.check_output(["macchanger", "-m", macaddr, iface])
 
 def get_macaddress(iface):
 	"""This works even for interfaces in monitor mode."""
