@@ -186,6 +186,17 @@ class MonitorSocket(L2Socket):
 		L2Socket.send(self, RadioTap(present="TXFlags", TXFlags="NOSEQ+ORDER")/p)
 
 	def _strip_fcs(self, p):
+		"""
+		Scapy may throw exceptions when handling malformed short frames,
+		so we need to catch these exceptions and just ignore these frames.
+		This in particular happened with short malformed beacons.
+		"""
+		try:
+			return Dot11(raw(p[Dot11FCS])[:-4])
+		except:
+			return None
+
+	def _detect_and_strip_fcs(self, p):
 		# Older scapy can't handle the optional Frame Check Sequence (FCS) field automatically
 		if p[RadioTap].present & 2 != 0 and not Dot11FCS in p:
 			rawframe = raw(p[RadioTap])
@@ -199,7 +210,7 @@ class MonitorSocket(L2Socket):
 
 			# Remove FCS if present
 			if orb(rawframe[pos]) & 0x10 != 0:
-				return Dot11(raw(p[Dot11])[:-4])
+				return self._strip_fcs(p)
 
 		return p[Dot11]
 
@@ -218,9 +229,9 @@ class MonitorSocket(L2Socket):
 
 		# Strip the FCS if present, and drop the RadioTap header
 		if Dot11FCS in p:
-			return Dot11(raw(p[Dot11FCS])[:-4])
-		else:
 			return self._strip_fcs(p)
+		else:
+			return self._detect_and_strip_fcs(p)
 
 	def close(self):
 		super(MonitorSocket, self).close()
