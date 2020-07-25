@@ -249,11 +249,13 @@ def test_injection(iface_out, iface_in=None, peermac=None, ownmac=None, testack=
 		test_injection_ack(sout, sin, addr1=destmac, addr2=ownmac)
 
 	# Show a summary of results/advice
-	if status != 0: log(STATUS, "")
+	log(STATUS, "")
+	if status == 0:
+		log(STATUS, "==> The most important tests have been passed successfully!", color="green")
 	if status & FLAG_NOCAPTURE != 0:
 		log(WARNING, f"==> Failed to capture some frames. Try another channel or use another monitoring device.")
 	if status & FLAG_FAIL !=0 :
-		log(WARNING, f"==> Some tests failed. Are you using patched drivers/firmware?")
+		log(ERROR, f"==> Some tests failed. Are you using patched drivers/firmware?")
 
 	sout.close()
 	sin.close()
