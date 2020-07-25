@@ -178,7 +178,7 @@ def test_injection_ack(sout, sin, addr1, addr2):
 
 #### Main test function ####
 
-def test_injection(iface_out, iface_in=None, peermac=None, ownmac=None):
+def test_injection(iface_out, iface_in=None, peermac=None, ownmac=None, testack=True):
 	status = 0
 
 	# We start monitoring iface_in already so injected frame won't be missed
@@ -230,7 +230,7 @@ def test_injection(iface_out, iface_in=None, peermac=None, ownmac=None):
 	status |= test_injection_order(sout, sin, valid, "(partly) valid MAC addresses")
 
 	# Acknowledgement behaviour tests
-	if iface_in != None:
+	if iface_in != None and testack:
 		# We search for an AP on the interface that injects frames because:
 		# 1. In mixed managed/monitor mode, we will otherwise detect our own AP on the sout interface
 		# 2. If sout interface "sees" the AP this assure it will also receive its ACK frames
