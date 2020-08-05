@@ -31,7 +31,7 @@ def dot11ccmp_get_pn(p):
 def ccmp_get_nonce(priority, addr, pn):
 	return struct.pack("B", priority) + addr2bin(addr) + pn2bin(pn)
 
-def ccmp_get_aad(p):
+def ccmp_get_aad(p, amsdu_spp=False):
 	# FC field with masked values
 	fc = raw(p)[:2]
 	fc = struct.pack("<BB", fc[0] & 0x8f, fc[1] & 0xc7)
@@ -44,15 +44,19 @@ def ccmp_get_aad(p):
 	addr3 = addr2bin(p.addr3)
 	aad = fc + addr1 + addr2 + addr3 + sc
 	if Dot11QoS in p:
-		# Everything except the TID is masked
-		aad += struct.pack("<H", p[Dot11QoS].TID)
+		if not amsdu_spp:
+			# Everything except the TID is masked
+			aad += struct.pack("<H", p[Dot11QoS].TID)
+		else:
+			# TODO: Mask unrelated fields
+			aad += raw(p[Dot11QoS])[:2]
 
 	return aad
 
 def Raw(x):
 	return x
 
-def encrypt_ccmp(p, tk, pn, keyid=0):
+def encrypt_ccmp(p, tk, pn, keyid=0, amsdu_spp=False):
 	"""Takes a plaintext Dot11 frame, encrypts it, and adds all the necessairy headers"""
 
 	# Update the FC field
@@ -79,7 +83,7 @@ def encrypt_ccmp(p, tk, pn, keyid=0):
 
 	# Generate the CCMP Header and AAD for encryption.
 	ccm_nonce = ccmp_get_nonce(priority, newp.addr2, pn)
-	ccm_aad = ccmp_get_aad(newp)
+	ccm_aad = ccmp_get_aad(newp, amsdu_spp)
 	#print("CCM Nonce:", ccm_nonce.hex())
 	#print("CCM aad  :", ccm_aad.hex())
 
