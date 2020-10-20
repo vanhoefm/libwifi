@@ -111,7 +111,7 @@ def get_iface_type(iface):
 	p = re.compile("type (\w+)")
 	return str(p.search(output).group(1))
 
-def set_monitor_mode(iface):
+def set_monitor_mode(iface, up=True, mtu=1500):
 	# Note: we let the user put the device in monitor mode, such that they can control optional
 	#       parameters such as "iw wlan0 set monitor active" for devices that support it.
 	if get_iface_type(iface) != "monitor":
@@ -122,8 +122,9 @@ def set_monitor_mode(iface):
 		time.sleep(0.5)
 		subprocess.check_output(["iw", iface, "set", "type", "monitor"])
 
-	subprocess.check_output(["ifconfig", iface, "up"])
-	subprocess.check_output(["ifconfig", iface, "mtu", "1500"])
+	if up:
+		subprocess.check_output(["ifconfig", iface, "up"])
+	subprocess.check_output(["ifconfig", iface, "mtu", str(mtu)])
 
 #### Packet Processing Functions ####
 
