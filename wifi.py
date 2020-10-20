@@ -9,11 +9,21 @@ import binascii
 
 #### Constants ####
 
-IEEE_TLV_TYPE_BEACON = 0
+IEEE_TLV_TYPE_SSID    = 0
+IEEE_TLV_TYPE_CHANNEL = 3
+IEEE_TLV_TYPE_RSN     = 48
+IEEE_TLV_TYPE_CSA     = 37
+IEEE_TLV_TYPE_VENDOR  = 221
 
 WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY = 4
 WLAN_REASON_CLASS2_FRAME_FROM_NONAUTH_STA = 6
 WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA = 7
+
+#TODO: Not sure if really needed...
+IEEE80211_RADIOTAP_RATE = (1 << 2)
+IEEE80211_RADIOTAP_CHANNEL = (1 << 3)
+IEEE80211_RADIOTAP_TX_FLAGS = (1 << 15)
+IEEE80211_RADIOTAP_DATA_RETRIES = (1 << 17)
 
 #### Basic output and logging functionality ####
 
@@ -175,15 +185,26 @@ if not "ORDER" in scapy.layers.dot11._rt_txflags:
 	scapy.layers.dot11._rt_txflags.append("ORDER")
 
 class MonitorSocket(L2Socket):
-	def __init__(self, detect_injected=False, **kwargs):
+	def __init__(self, dumpfile=None, detect_injected=False, **kwargs):
 		super(MonitorSocket, self).__init__(**kwargs)
+		self.pcap = None
+		if dumpfile:
+			self.pcap = PcapWriter("%s.%s.pcap" % (dumpfile, self.iface), append=False, sync=True)
 		self.detect_injected = detect_injected
+
+	def set_channel(self, channel):
+		subprocess.check_output(["iw", self.iface, "set", "channel", str(channel)])
+
+	def attach_filter(self, bpf):
+		log(DEBUG, "Attaching filter to %s: <%s>" % (self.iface, bpf))
+		attach_filter(self.ins, bpf, self.iface)
 
 	def send(self, p):
 		# Hack: set the More Data flag so we can detect injected frames (and so clients stay awake longer)
 		if self.detect_injected:
 			p.FCfield |= 0x20
 		L2Socket.send(self, RadioTap(present="TXFlags", TXFlags="NOSEQ+ORDER")/p)
+		if self.pcap: self.pcap.write(RadioTap()/p)
 
 	def _strip_fcs(self, p):
 		"""
@@ -218,13 +239,15 @@ class MonitorSocket(L2Socket):
 		p = L2Socket.recv(self, x)
 		if p == None or not (Dot11 in p or Dot11FCS in p):
 			return None
+		if self.pcap:
+			self.pcap.write(p)
 
 		# Hack: ignore frames that we just injected and are echoed back by the kernel
 		if self.detect_injected and p.FCfield & 0x20 != 0:
 			return None
 
 		# Ignore reflection of injected frames. These have a small RadioTap header.
-		if not reflected and p[RadioTap].len <= 13:
+		if not reflected and p[RadioTap].len < 13:
 			return None
 
 		# Strip the FCS if present, and drop the RadioTap header
@@ -234,6 +257,7 @@ class MonitorSocket(L2Socket):
 			return self._detect_and_strip_fcs(p)
 
 	def close(self):
+		if self.pcap: self.pcap.close()
 		super(MonitorSocket, self).close()
 
 # For backwards compatibility
@@ -287,15 +311,6 @@ def dot11_get_iv(p):
 
 	else:
 		return None
-
-def get_tlv_value(p, type):
-	if not Dot11Elt in p: return None
-	el = p[Dot11Elt]
-	while isinstance(el, Dot11Elt):
-		if el.ID == type:
-			return el.info
-		el = el.payload
-	return None
 
 def dot11_get_priority(p):
 	if not Dot11QoS in p: return 0
@@ -366,6 +381,7 @@ def create_fragments(header, data, num_frags):
 	return fragments
 
 def get_element(el, id):
+	if not Dot11Elt in el: return None
 	el = el[Dot11Elt]
 	while not el is None:
 		if el.ID == id:
@@ -377,7 +393,7 @@ def get_ssid(beacon):
 	if not (Dot11 in beacon or Dot11FCS in beacon): return
 	if Dot11Elt not in beacon: return
 	if beacon[Dot11].type != 0 and beacon[Dot11].subtype != 8: return
-	el = get_element(beacon, 0)
+	el = get_element(beacon, IEEE_TLV_TYPE_SSID)
 	return el.info.decode()
 
 def create_msdu_subframe(src, dst, payload, last=False):
