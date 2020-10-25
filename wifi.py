@@ -366,6 +366,10 @@ class IvCollection():
 		return iv > max(self.ivs.keys())
 
 def create_fragments(header, data, num_frags):
+	# This special case is useful so scapy keeps the full "interpretation" of the frame
+	# instead of afterwards treating/displaying the payload as just raw data.
+	if num_frags == 1: return [header/data]
+
 	data = raw(data)
 	fragments = []
 	fragsize = (len(data) + num_frags - 1) // num_frags
