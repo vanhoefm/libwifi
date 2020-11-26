@@ -414,3 +414,24 @@ def create_msdu_subframe(src, dst, payload, last=False):
 
 	return p / payload / Raw(padding)
 
+def find_network(iface, ssid):
+	ps = sniff(count=1, timeout=0.3, lfilter=lambda p: get_ssid(p) == ssid, iface=iface)
+	if ps is None or len(ps) < 1:
+		log(STATUS, "Searching for target network on other channels")
+		for chan in [1, 6, 11, 3, 8, 2, 7, 4, 10, 5, 9, 12, 13]:
+			set_channel(iface, chan)
+			log(DEBUG, "Listening on channel %d" % chan)
+			ps = sniff(count=1, timeout=0.3, lfilter=lambda p: get_ssid(p) == ssid, iface=iface)
+			if ps and len(ps) >= 1: break
+
+	if ps and len(ps) >= 1:
+		# Even though we capture the beacon we might still be on another channel,
+		# so it's important to explicitly switch to the correct channel.
+		actual_chan = orb(get_element(ps[0], IEEE_TLV_TYPE_CHANNEL).info)
+		set_channel(iface, actual_chan)
+
+		# Return the beacon that we captured
+		return ps[0]
+
+	return None
+
