@@ -126,6 +126,9 @@ def set_monitor_mode(iface, up=True, mtu=1500):
 		subprocess.check_output(["ifconfig", iface, "up"])
 	subprocess.check_output(["ifconfig", iface, "mtu", str(mtu)])
 
+def rawmac(addr):
+	return bytes.fromhex(addr.replace(':', ''))
+
 #### Packet Processing Functions ####
 
 class DHCP_sock(DHCP_am):
