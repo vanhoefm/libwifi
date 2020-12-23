@@ -195,6 +195,7 @@ class MonitorSocket(L2Socket):
 		if dumpfile:
 			self.pcap = PcapWriter("%s.%s.pcap" % (dumpfile, self.iface), append=False, sync=True)
 		self.detect_injected = detect_injected
+		self.default_rate = None
 
 	def set_channel(self, channel):
 		subprocess.check_output(["iw", self.iface, "set", "channel", str(channel)])
@@ -203,11 +204,22 @@ class MonitorSocket(L2Socket):
 		log(DEBUG, "Attaching filter to %s: <%s>" % (self.iface, bpf))
 		attach_filter(self.ins, bpf, self.iface)
 
-	def send(self, p):
+	def set_default_rate(self, rate):
+		self.default_rate = rate
+
+	def send(self, p, rate=None):
 		# Hack: set the More Data flag so we can detect injected frames (and so clients stay awake longer)
 		if self.detect_injected:
 			p.FCfield |= 0x20
-		L2Socket.send(self, RadioTap(present="TXFlags", TXFlags="NOSEQ+ORDER")/p)
+
+		# Control data rate injected frames
+		if rate is None and self.default_rate is None:
+			rtap = RadioTap(present="TXFlags", TXFlags="NOSEQ+ORDER")
+		else:
+			use_rate = rate if rate != None else self.default_rate
+			rtap = RadioTap(present="TXFlags+Rate", Rate=use_rate, TXFlags="NOSEQ+ORDER")
+
+		L2Socket.send(self, rtap/p)
 		if self.pcap: self.pcap.write(RadioTap()/p)
 
 	def _strip_fcs(self, p):
