@@ -310,7 +310,13 @@ def dot11_get_iv(p):
 		payload = raw(p[Dot11TKIP])
 		return payload_to_iv(payload)
 
-	if Dot11CCMP in p or Dot11TKIP in p or Dot11Encrypted in p:
+	if Dot11CCMP in p:
+		payload = raw(p[Dot11CCMP])
+		return payload_to_iv(payload)
+	elif Dot11TKIP in p:
+		payload = raw(p[Dot11TKIP])
+		return payload_to_iv(payload)
+	elif Dot11Encrypted in p:
 		payload = raw(p[Dot11Encrypted])
 		return payload_to_iv(payload)
 
@@ -341,7 +347,11 @@ def get_ccmp_payload(p):
 		# - Skip extended IV (4 bytes in total)
 		# - Exclude first 4 bytes of the CCMP MIC (note that last 4 are saved in the WEP ICV field)
 		return str(p.wepdata[4:-4])
-	elif Dot11CCMP in p or Dot11TKIP in p or Dot11Encrypted in p:
+	elif Dot11CCMP in p:
+		return p[Dot11CCMP].data
+	elif Dot11TKIP in p:
+		return p[Dot11TKIP].data
+	elif Dot11Encrypted in p:
 		return p[Dot11Encrypted].data
 	else:
 		return p[Raw].load
