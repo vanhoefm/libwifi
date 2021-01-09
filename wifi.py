@@ -426,6 +426,19 @@ def get_ssid(beacon):
 	el = get_element(beacon, IEEE_TLV_TYPE_SSID)
 	return el.info.decode()
 
+def is_from_sta(p, macaddr):
+	if not (Dot11 in p or Dot11FCS in p):
+		return False
+	if p.addr1 != macaddr and p.addr2 != macaddr:
+		return False
+	return True
+
+def get_bss(iface, clientmac, timeout=20):
+	ps = sniff(count=1, timeout=timeout, lfilter=lambda p: is_from_sta(p, clientmac), iface=iface)
+	if len(ps) == 0:
+		return None
+	return ps[0].addr1 if ps[0].addr1 != clientmac else ps[0].addr2
+
 def create_msdu_subframe(src, dst, payload, last=False):
 	length = len(payload)
 	p = Ether(dst=dst, src=src, type=length)
