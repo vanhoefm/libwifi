@@ -99,9 +99,9 @@ def test_injection_fields(sout, sin, ref, strtype):
 	status |= test_packet_injection(sout, sin, p, lambda cap: cap.TID == p.TID, f"empty QoS data frame with {strtype}",
 					"QoS TID of injected {frametype} is being overwritten!")
 
-	p = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, addr3=ref.addr3, type=2, subtype=8, SC=33<<4)/Dot11QoS(TID=2, Reserved=1)/Raw("BBBB")
+	p = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, addr3=ref.addr3, type=2, subtype=8, SC=33<<4)/Dot11QoS(TID=2, A_MSDU_Present=1)/Raw("BBBB")
 	status |= test_packet_injection(sout, sin, p, \
-					lambda cap: cap.TID == p.TID and cap.Reserved == 1 and b"BBBB" in raw(cap), \
+					lambda cap: cap.TID == p.TID and cap.A_MSDU_Present == 1 and b"BBBB" in raw(cap), \
 					f"A-MSDU frame with {strtype}",	"A-MSDU frame is not properly injected!")
 
 	if status == 0: log(STATUS, f"[+] All tested fields are properly injected when using {strtype}.", color="green")
