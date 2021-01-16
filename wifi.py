@@ -129,6 +129,18 @@ def set_monitor_mode(iface, up=True, mtu=1500):
 def rawmac(addr):
 	return bytes.fromhex(addr.replace(':', ''))
 
+def set_amsdu(p):
+	if "A_MSDU_Present" in [field.name for field in Dot11QoS.fields_desc]:
+		p.A_MSDU_Present = 1
+	else:
+		p.Reserved = 1
+
+def is_amsdu(p):
+	if "A_MSDU_Present" in [field.name for field in Dot11QoS.fields_desc]:
+		return p.A_MSDU_Present == 1
+	else:
+		return p.Reserved == 1
+
 #### Packet Processing Functions ####
 
 class DHCP_sock(DHCP_am):
