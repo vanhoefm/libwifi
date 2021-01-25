@@ -102,7 +102,6 @@ def encrypt_ccmp(p, tk, pn, keyid=0, amsdu_spp=False):
 
 	return newp
 
-# XXX Assure this is still compatible with KRACK attack scripts
 def decrypt_ccmp(p, tk, verify=True):
 	"""Takes a Dot11CCMP frame and decrypts it"""
 
@@ -111,7 +110,7 @@ def decrypt_ccmp(p, tk, verify=True):
 	# Get used CCMP parameters
 	keyid = p.key_id
 	priority = dot11_get_priority(p)
-	pn = dot11ccmp_get_pn(p) # XXX why not dot11_get_iv?
+	pn = dot11ccmp_get_pn(p)
 
 	# TODO: Mask flags in p.FCfield that are not part of the AAD
 	fc = p.FCfield
@@ -131,10 +130,11 @@ def decrypt_ccmp(p, tk, verify=True):
 	cipher.update(ccm_aad)
 	plaintext = cipher.decrypt(payload[:-8])
 
-	if verify:
-		cipher.verify(payload[-8:])
-
-	# TODO: Strip the protected bit from the frame?
+	try:
+		if verify:
+			cipher.verify(payload[-8:])
+	except ValueError:
+		return None
 
 	return p/LLC(plaintext)
 
