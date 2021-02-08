@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020, Mathy Vanhoef <mathy.vanhoef@nyu.edu>
+# Copyright (c) 2019-2021, Mathy Vanhoef <mathy.vanhoef@nyu.edu>
 #
 # This code may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -46,6 +46,12 @@ def log(level, msg, color=None, showtime=True):
 def change_log_level(delta):
 	global global_log_level
 	global_log_level += delta
+
+def croprepr(p, length=175):
+	string = repr(p)
+	if len(string) > length:
+		return string[:length - 3] + "..."
+	return string
 
 #### Back-wards compatibility with older scapy
 
