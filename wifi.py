@@ -309,42 +309,44 @@ def payload_to_iv(payload):
 
 def dot11_get_iv(p):
 	"""
-	Assume it's a CCMP frame. Old scapy can't handle Extended IVs.
-	This code only works for CCMP frames.
+	This function assumes the frame is encrypted using either CCMP or WEP.
+	It does not work for other encrypion protocol (e.g. TKIP).
 	"""
+
+	# The simple and default case
 	if Dot11CCMP in p:
 		payload = raw(p[Dot11CCMP])
 		return payload_to_iv(payload)
 
-	elif Dot11TKIP in p:
-		# Scapy uses a heuristic to differentiate CCMP/TKIP and this may be wrong.
-		# So even when we get a Dot11TKIP frame, we should treat it like a Dot11CCMP frame.
-		payload = raw(p[Dot11TKIP])
-		return payload_to_iv(payload)
-
-	if Dot11CCMP in p:
-		payload = raw(p[Dot11CCMP])
-		return payload_to_iv(payload)
+	# Scapy uses a heuristic to differentiate CCMP/TKIP and this may be wrong.
+	# So even when we get a Dot11TKIP frame, we'll still treat it like a Dot11CCMP frame.
 	elif Dot11TKIP in p:
 		payload = raw(p[Dot11TKIP])
-		return payload_to_iv(payload)
-	elif Dot11Encrypted in p:
-		payload = raw(p[Dot11Encrypted])
 		return payload_to_iv(payload)
 
 	elif Dot11WEP in p:
 		wep = p[Dot11WEP]
+		# Older Scapy versions parse CCMP-encrypted frames as Dot11WEP. So we check if the
+		# extended IV flag is set, and if so, treat it like a CCMP frame.
 		if wep.keyid & 32:
-			# FIXME: Only CCMP is supported (TKIP uses a different IV structure)
+			# This only works for CCMP (TKIP uses a different IV structure).
 			return orb(wep.iv[0]) + (orb(wep.iv[1]) << 8) + (struct.unpack(">I", wep.wepdata[:4])[0] << 16)
+
+		# If the extended IV flag is not set meaning it's indeed WEP.
 		else:
 			return orb(wep.iv[0]) + (orb(wep.iv[1]) << 8) + (orb(wep.iv[2]) << 16)
 
+	# Scapy uses Dot11Encrypted if it couldn't determine how the frame was encrypted. Assume CCMP.
+	elif Dot11Encrypted in p:
+		payload = raw(p[Dot11Encrypted])
+		return payload_to_iv(payload)
+
+	# Manually detect encrypted frames in case (older versions of) Scapy failed to do this. Assume CCMP.
 	elif p.FCfield & 0x40:
 		return payload_to_iv(p[Raw].load)
 
-	else:
-		return None
+	# Couldn't determine the IV
+	return None
 
 def dot11_get_priority(p):
 	if not Dot11QoS in p: return 0
