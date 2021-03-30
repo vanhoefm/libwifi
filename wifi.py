@@ -448,7 +448,7 @@ def is_from_sta(p, macaddr):
 	return True
 
 def get_bss(iface, clientmac, timeout=20):
-	ps = sniff(count=1, timeout=timeout, lfilter=lambda p: is_from_sta(p, clientmac), iface=iface)
+	ps = sniff(count=1, timeout=timeout, lfilter=lambda p: is_from_sta(p, clientmac) and p.addr2 != None, iface=iface)
 	if len(ps) == 0:
 		return None
 	return ps[0].addr1 if ps[0].addr1 != clientmac else ps[0].addr2
