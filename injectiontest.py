@@ -47,7 +47,7 @@ def inject_and_capture(sout, sin, p, count=0, retries=1):
 		if len(packets) > 0 or attempt >= retries:
 			break
 
-		log(STATUS, "Unable to capture injected frame, retrying.")
+		log(STATUS, "     Unable to capture injected frame, retrying.")
 		attempt += 1
 
 	return packets
