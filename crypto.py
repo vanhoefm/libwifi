@@ -9,6 +9,45 @@ from scapy.layers.dot11 import Dot11, Dot11CCMP, Dot11QoS
 
 import zlib
 
+
+def rsn_prf_sha1(key, label, B, numbytes):
+	numbytes = 64
+	output = b''
+
+	# SHA1 outputs 20 bytes, so we need to do numbytes/20 loops
+	for i in range(math.ceil(numbytes / 20)):
+		data = label + b'\x00' + B + struct.pack("<B", i)
+		hmacsha1 = hmac.new(key, data, hashlib.sha1)
+		output += hmacsha1.digest()
+
+	return output[:numbytes]
+
+
+def aes_wrap_key(kek, plaintext, iv=0xa6a6a6a6a6a6a6a6):
+	n = len(plaintext)//8
+	R = [None]+[plaintext[i*8:i*8+8] for i in range(0, n)]
+	A = iv
+	encrypt = AES.new(kek, AES.MODE_ECB).encrypt
+	for j in range(6):
+		for i in range(1, n+1):
+			B = encrypt(struct.pack(">Q", A) + R[i])
+			A = struct.unpack(">Q", B[:8])[0] ^ (n*j + i)
+			R[i] = B[8:]
+	return struct.pack(">Q", A) + b"".join(R[1:])
+
+
+def aes_wrap_key_withpad(kek, plaintext):
+	num_padding = (8 - len(plaintext)) % 8
+	log(STATUS, f"Number of padding bytes: {num_padding}")
+	if num_padding >= 1:
+		# Start of padding is indicated by special 0xDD byte
+		plaintext += b"\xdd"
+		# All the other padding bytes are zero
+		plaintext += b"\x00" * (num_padding - 1)
+
+	return aes_wrap_key(kek, plaintext)
+
+
 def pn2bytes(pn):
 	pn_bytes = [0] * 6
 	for i in range(6):
@@ -16,8 +55,10 @@ def pn2bytes(pn):
 		pn >>= 8
 	return pn_bytes
 
+
 def pn2bin(pn):
 	return struct.pack(">Q", pn)[2:]
+
 
 def dot11ccmp_get_pn(p):
 	pn = p.PN5
@@ -28,8 +69,10 @@ def dot11ccmp_get_pn(p):
 	pn = (pn << 8) | p.PN0
 	return pn
 
+
 def ccmp_get_nonce(priority, addr, pn):
 	return struct.pack("B", priority) + addr2bin(addr) + pn2bin(pn)
+
 
 def ccmp_get_aad(p, amsdu_spp=False):
 	# FC field with masked values
@@ -53,8 +96,10 @@ def ccmp_get_aad(p, amsdu_spp=False):
 
 	return aad
 
+
 def Raw(x):
 	return x
+
 
 def encrypt_ccmp(p, tk, pn, keyid=0, amsdu_spp=False):
 	"""Takes a plaintext Dot11 frame, encrypts it, and adds all the necessairy headers"""
@@ -102,6 +147,7 @@ def encrypt_ccmp(p, tk, pn, keyid=0, amsdu_spp=False):
 
 	return newp
 
+
 def decrypt_ccmp(p, tk, verify=True):
 	"""Takes a Dot11CCMP frame and decrypts it"""
 
@@ -137,6 +183,7 @@ def decrypt_ccmp(p, tk, verify=True):
 		return None
 
 	return p/LLC(plaintext)
+
 
 def encrypt_wep(p, key, pn, keyid=0):
 	"""Takes a plaintext Dot11 frame, encrypts it, and adds all the necessairy headers"""
