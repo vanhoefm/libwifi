@@ -1,3 +1,3 @@
 #!/bin/bash
 cd ..
-python -m pytest $@
+python -m pytest libwifi

@@ -3,6 +3,7 @@
 # This code may be distributed under the terms of the BSD license.
 # See README for more details.
 from scapy.all import *
+from scapy.arch.linux import L2Socket
 from Crypto.Cipher import AES
 from datetime import datetime
 import binascii
