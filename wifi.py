@@ -307,6 +307,10 @@ class MonitorSocket(L2Socket):
 		else:
 			return self._detect_and_strip_fcs(p)
 
+	def flush(self):
+		while len(select.select([self], [], [], 0)[0]) > 0:
+			L2Socket.recv(self, MTU)
+
 	def close(self):
 		if self.pcap: self.pcap.close()
 		super(MonitorSocket, self).close()
