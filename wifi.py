@@ -3,7 +3,7 @@
 # This code may be distributed under the terms of the BSD license.
 # See README for more details.
 from scapy.all import *
-from scapy.arch.linux import L2Socket
+from scapy.arch.linux import L2Socket, attach_filter
 from Crypto.Cipher import AES
 from datetime import datetime
 import binascii
@@ -228,7 +228,7 @@ class MonitorSocket(L2Socket):
 		subprocess.check_output(["iw", self.iface, "set", "channel", str(channel)])
 
 	def attach_filter(self, bpf):
-		log(DEBUG, "Attaching filter to %s: <%s>" % (self.iface, bpf))
+		log(DEBUG, "Attaching filter to %s: %s" % (self.iface, bpf))
 		attach_filter(self.ins, bpf, self.iface)
 
 	def set_default_rate(self, rate):
