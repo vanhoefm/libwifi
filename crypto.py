@@ -104,6 +104,10 @@ def Raw(x):
 def encrypt_ccmp(p, tk, pn, keyid=0, amsdu_spp=False):
 	"""Takes a plaintext Dot11 frame, encrypts it, and adds all the necessairy headers"""
 
+	if len(tk) != 16:
+		log(ERROR, f"encrypt_ccmp: key length is {len(station.gtk)}, indicating CCMP isn't being used.")
+		quit()
+
 	# Update the FC field
 	p = p.copy()
 	p.FCfield |= Dot11(FCfield="protected").FCfield
