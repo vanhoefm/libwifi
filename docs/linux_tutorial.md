@@ -241,8 +241,21 @@ If you're lucky it might also contain the output of `iw list`.
 <a id="id-virtual-interface"></a>
 ## Virtual Interfaces
 
+### Background and example
+
 On Linux it's possible to associate one physical network card with multiple _virtual_ interfaces.
 For example, a physical network card can sometimes be used both as a client and an access point.
+
+Another common combination is that a physical network card can be used as a client or acceess point, with a second virtual interface in monitor mode.
+This can be done using the following command:
+
+	iw wlan0 interface add wlan0mon type monitor
+
+Make sure that the new interface, wlan0mon in the above example, has a short enough name.
+Linux doesn't support interface names longer than [15 characters](https://elixir.bootlin.com/linux/v5.6/C/ident/IFNAMSIZ), so when providing a too long new network interface name, the above command would give an error.
+
+### Details
+
 The allowed combinations depend on the capabilities of the driver and network card and are included in the output of `iw list`:
 
 	...
