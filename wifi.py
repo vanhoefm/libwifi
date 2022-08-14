@@ -514,3 +514,27 @@ def find_network(iface, ssid):
 
 	return None
 
+
+def construct_csa(channel, count=1):
+	switch_mode = 1			# STA should not Tx untill switch is completed
+	new_chan_num = channel	# Channel it should switch to
+	switch_count = count	# Immediately make the station switch
+
+	# Contruct the IE
+	payload = struct.pack("<BBB", switch_mode, new_chan_num, switch_count)
+	return Dot11Elt(ID=IEEE_TLV_TYPE_CSA, info=payload)
+
+
+def append_csa(p, channel, count=1):
+	p = p.copy()
+
+	el = p[Dot11Elt]
+	prevel = None
+	while isinstance(el, Dot11Elt):
+		prevel = el
+		el = el.payload
+
+	prevel.payload = construct_csa(channel, count)
+
+	return p
+
