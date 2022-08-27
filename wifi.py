@@ -269,7 +269,8 @@ class MonitorSocket(L2Socket):
 			return None
 
 	def _detect_and_strip_fcs(self, p):
-		# Older scapy can't handle the optional Frame Check Sequence (FCS) field automatically
+		# Older scapy can't handle the optional Frame Check Sequence (FCS) field automatically.
+		# FIXME: simplify this code by using newer scapy functionality (we use a virtualenv anyway).
 		if p[RadioTap].present & 2 != 0 and not Dot11FCS in p:
 			rawframe = raw(p[RadioTap])
 			pos = 8
@@ -286,19 +287,27 @@ class MonitorSocket(L2Socket):
 
 		return p[Dot11]
 
-	def recv(self, x=MTU, reflected=False):
+	def recv(self, x=MTU, injected=False):
+		"""
+		@param injected	When set to True, injected frames will be recieved by this function.
+		                This is because the kernel "echoes" them back with a RadioTap header
+		                that includes information about the transmission of the injected frame.
+		                We strip the RadioTap header this, so recieving these frames is
+		                usually useless in scripts, hence this value is by default False.
+		"""
 		p = L2Socket.recv(self, x)
 		if p == None or not (Dot11 in p or Dot11FCS in p):
 			return None
 		if self.pcap:
 			self.pcap.write(p)
 
-		# Hack: ignore frames that we just injected and are echoed back by the kernel
+		# Hack: ignore frames that we just injected and are echoed back. This may be useful
+		#       when an injected frame is received by another dongle.
 		if self.detect_injected and p.FCfield & 0x20 != 0:
 			return None
 
-		# Ignore reflection of injected frames. These have a small RadioTap header.
-		if not reflected and p[RadioTap].len < 13:
+		# Ignore reflection of injected frames. These contain TXFlags in the RadioTap header.
+		if p[RadioTap].present & "TXFlags":
 			return None
 
 		# Strip the FCS if present, and drop the RadioTap header
