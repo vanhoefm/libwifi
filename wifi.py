@@ -513,15 +513,18 @@ def create_msdu_subframe(src, dst, payload, last=False):
 
 	return p / payload / Raw(padding)
 
-def find_network(iface, ssid):
-	ps = sniff(count=1, timeout=0.3, lfilter=lambda p: get_ssid(p) == ssid, iface=iface)
-	if ps is None or len(ps) < 1:
-		log(STATUS, "Searching for target network on other channels")
-		for chan in [1, 6, 11, 3, 8, 2, 7, 4, 10, 5, 9, 12, 13]:
+def find_network(iface, ssid, opened_socket):
+	log(STATUS, "Searching for target network...")
+	for chan in [None, 1, 6, 11, 3, 8, 2, 7, 4, 10, 5, 9, 12, 13]:
+		# We first search on the current channel that the network card is on
+		if chan != None:
 			set_channel(iface, chan)
-			log(DEBUG, "Listening on channel %d" % chan)
+			log(DEBUG, f"Listening on channel {chan}")
+		if opened_socket == None:
 			ps = sniff(count=1, timeout=0.3, lfilter=lambda p: get_ssid(p) == ssid, iface=iface)
-			if ps and len(ps) >= 1: break
+		else:
+			ps = sniff(count=1, timeout=0.3, lfilter=lambda p: get_ssid(p) == ssid, opened_socket=opened_socket)
+		if ps and len(ps) >= 1: break
 
 	if ps and len(ps) >= 1:
 		# Even though we capture the beacon we might still be on another channel,
