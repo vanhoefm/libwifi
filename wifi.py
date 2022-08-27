@@ -247,15 +247,19 @@ class MonitorSocket(L2Socket):
 		if self.detect_injected:
 			p.FCfield |= 0x20
 
-		# Control data rate injected frames
-		if rate is None and self.default_rate is None:
-			rtap = RadioTap(present="TXFlags", TXFlags="NOSEQ+ORDER")
+		# Control data rate of injected frames
+		if RadioTap in p:
+			log(WARNING, f"MonitorSocket: Injected frame already contains RadioTap header: {repr(p)}")
 		else:
-			use_rate = rate if rate != None else self.default_rate
-			rtap = RadioTap(present="TXFlags+Rate", Rate=use_rate, TXFlags="NOSEQ+ORDER")
+			if rate is None and self.default_rate is None:
+				rtap = RadioTap(present="TXFlags", TXFlags="NOSEQ+ORDER")
+			else:
+				use_rate = rate if rate != None else self.default_rate
+				rtap = RadioTap(present="TXFlags+Rate", Rate=use_rate, TXFlags="NOSEQ+ORDER")
+			p = rtap/p
 
-		L2Socket.send(self, rtap/p)
-		if self.pcap: self.pcap.write(RadioTap()/p)
+		L2Socket.send(self, p)
+		if self.pcap: self.pcap.write(p)
 
 	def _strip_fcs(self, p):
 		"""
