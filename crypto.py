@@ -60,16 +60,6 @@ def pn2bin(pn):
 	return struct.pack(">Q", pn)[2:]
 
 
-def dot11ccmp_get_pn(p):
-	pn = p.PN5
-	pn = (pn << 8) | p.PN4
-	pn = (pn << 8) | p.PN3
-	pn = (pn << 8) | p.PN2
-	pn = (pn << 8) | p.PN1
-	pn = (pn << 8) | p.PN0
-	return pn
-
-
 def ccmp_get_nonce(priority, addr, pn):
 	return struct.pack("B", priority) + addr2bin(addr) + pn2bin(pn)
 
@@ -160,7 +150,7 @@ def decrypt_ccmp(p, tk, verify=True):
 	# Get used CCMP parameters
 	keyid = get_ccmp_keyid(p)
 	priority = dot11_get_priority(p)
-	pn = dot11ccmp_get_pn(p)
+	pn = dot11_get_iv(p)
 
 	# TODO: Mask flags in p.FCfield that are not part of the AAD
 	fc = p.FCfield
