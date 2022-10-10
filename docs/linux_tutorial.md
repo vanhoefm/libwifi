@@ -18,6 +18,12 @@ The above command will only work if your Linux distribution (by default) provide
 See [backport drivers](#id-backport-drivers) to manually compile this kernel module.
 
 
+## Using real Wi-Fi interfaces
+
+Some general tips when using real Wi-Fi dongles:
+- You can inspect the output of `dmesg` to assure the kernel recognized the Wi-Fi network card
+- `ifconfig` will only show the current active network interfaces. Use `ifconfig -a` to show _all_ network interfaces.
+
 <a id="id-disable-wifi"></a>
 ## Disabling Wi-Fi in your network manager
 
