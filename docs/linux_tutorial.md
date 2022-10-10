@@ -126,55 +126,6 @@ The parameter `-i wlan` specifies the interface to use and `-c client.conf` the 
 Finally, `-dd -K` causes verbose debug output and causes encryption keys to be printed, respectively.
 
 
-## Simulated interfaces: client and AP connectivity
-
-To test the connectivity **when using simulated interfaces** we first have to move one of the interfaces to its own namespace.
-Without using namespace it [won't be possible](https://linux-wireless.vger.kernel.narkive.com/28FcVeGe/no-local-loopback-for-mac80211-hwsim-test-setup) to send and recieve ping requests between two interfaces on the same system.
-
-So we first execute the AP in its own namespace:
-
-	# Create a network namspace called "apnet" and move wlan0 to it
-	ip netns add apnet
-	PHYID=$(iw dev wlan0 info | grep wiphy | cut -d' ' -f2)
-	iw phy phy$PHYID set netns name apnet
-
-	# Execute hostapd in this namesace
-	ip netns exec apnet hostapd -dd -K hostapd.conf
-
-Then we start the client normally:
-
-	wpa_supplicant -D nl80211 -i wlan1 -c client.conf -dd -K
-
-Finally we can configure the IP addresses of both the client and the AP and send ICMP pings between them:
-
-	# Configure IP addresses
-	ip netns exec apnet ip addr add 192.168.100.1/24 dev wlan0
-	ip addr add 192.168.100.2/24 dev wlan1
-	# From the client ping the AP
-	ping 192.168.100.1
-	# From the AP ping the client
-	ip netns exec apnet ping 192.168.100.2
-
-The Wi-Fi traffic can be monitored on the `hwsim0` interface which captures packets on all channels.
-You may have to manually bring this interface up before you can use it:
-
-	ifconfig hwsim0 up
-
-Note that `hwsim0` captures _all_ frames over all channels and all interface.
-The `hwsim0` interface cannot be used to inject packets, it can only be used to monitor for packets.
-
-You can also capture traffic on the `wlan0` and `wlan1` interfaces.
-That will show the packets at the network layer.
-If you want to capture packets on `wlan0` in this example you have to run Wireshark in the proper network namespace:
-
-	ip netns exec apnet wireshark
-
-Sometimes it may be usefull to disable or override the MAC address randomization of your operating system when performing tests.
-You can either disable this in your network manager or manually set the MAC address of an interface:
-
-	sudo macchanger -m 00:11:22:33:44:44 wlan0
-
-
 ## Enabling monitor mode
 
 Most Wi-Fi cards supports monitor mode and can capture call nearby Wi-Fi frames on a given channel.
@@ -427,9 +378,11 @@ When in sleep mode, these devices are unable to receive Wi-Fi frames, which may 
 **TODO:** [See their wiki](https://backports.wiki.kernel.org/index.php/Main_Page).
 
 
-## Experimenting with WPA3 and SAE-PK
+## Advanced Topics
 
-### Compiling wpa_supplicant and Hostapd
+### Experimenting with WPA3 and SAE-PK
+
+#### Compiling wpa_supplicant and Hostapd
 
 When compiling `wpa_supplicant` make sure that its `.config` file includes:
 
@@ -446,7 +399,7 @@ When compiling `hostapd` make sure that its `.config` file includes:
 
 Note that for `hostapd` we enable DPP so required dependencies are properly compiled.
 
-### Configuring SAE-PK
+#### Configuring SAE-PK
 
 First generate a private key:
 
@@ -492,6 +445,55 @@ And the corresponding client configuration `client.conf`:
 		key_mgmt=SAE
 		ieee80211w=2
 	}
+
+### Simulated interfaces: client and AP connectivity
+
+To test the connectivity **when using simulated interfaces** we first have to move one of the interfaces to its own namespace.
+Without using namespace it [won't be possible](https://linux-wireless.vger.kernel.narkive.com/28FcVeGe/no-local-loopback-for-mac80211-hwsim-test-setup) to send and recieve ping requests between two interfaces on the same system.
+
+So we first execute the AP in its own namespace:
+
+	# Create a network namspace called "apnet" and move wlan0 to it
+	ip netns add apnet
+	PHYID=$(iw dev wlan0 info | grep wiphy | cut -d' ' -f2)
+	iw phy phy$PHYID set netns name apnet
+
+	# Execute hostapd in this namesace
+	ip netns exec apnet hostapd -dd -K hostapd.conf
+
+Then we start the client normally:
+
+	wpa_supplicant -D nl80211 -i wlan1 -c client.conf -dd -K
+
+Finally we can configure the IP addresses of both the client and the AP and send ICMP pings between them:
+
+	# Configure IP addresses
+	ip netns exec apnet ip addr add 192.168.100.1/24 dev wlan0
+	ip addr add 192.168.100.2/24 dev wlan1
+	# From the client ping the AP
+	ping 192.168.100.1
+	# From the AP ping the client
+	ip netns exec apnet ping 192.168.100.2
+
+The Wi-Fi traffic can be monitored on the `hwsim0` interface which captures packets on all channels.
+You may have to manually bring this interface up before you can use it:
+
+	ifconfig hwsim0 up
+
+Note that `hwsim0` captures _all_ frames over all channels and all interface.
+The `hwsim0` interface cannot be used to inject packets, it can only be used to monitor for packets.
+
+You can also capture traffic on the `wlan0` and `wlan1` interfaces.
+That will show the packets at the network layer.
+If you want to capture packets on `wlan0` in this example you have to run Wireshark in the proper network namespace:
+
+	ip netns exec apnet wireshark
+
+Sometimes it may be usefull to disable or override the MAC address randomization of your operating system when performing tests.
+You can either disable this in your network manager or manually set the MAC address of an interface:
+
+	sudo macchanger -m 00:11:22:33:44:44 wlan0
+
 
 
 ## Extra Sources
