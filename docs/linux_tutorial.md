@@ -17,6 +17,10 @@ The `modeprobe` command is used to load this kernel module.
 The above command will only work if your Linux distribution (by default) provides the `mac80211_hwsim` kernel module.
 See [backport drivers](#id-backport-drivers) to manually compile this kernel module.
 
+When loading this module, a special interface called `hwsim0` will also be created. This special interface captures
+all frames coming through the simulated Wi-fi interfaces (over all channels). Enable the interface by executing
+`ifconfig hwsim0 up` or similar. It's automatically in [monitor mode](#monitor-mode) but you cannot use it to
+[inject frames](injecting-frames).
 
 ## Using real Wi-Fi interfaces
 
@@ -131,7 +135,7 @@ The parameter `-D nl80211` means the modern `nl80211` API is used to communicate
 The parameter `-i wlan` specifies the interface to use and `-c client.conf` the configuration of the network.
 Finally, `-dd -K` causes verbose debug output and causes encryption keys to be printed, respectively.
 
-
+<a id="monitor-mode"></a>
 ## Enabling monitor mode
 
 Most Wi-Fi cards supports monitor mode and can capture call nearby Wi-Fi frames on a given channel.
@@ -244,7 +248,7 @@ Note: when using an Intel card in client or AP mode and a second interface in mo
 Instead, you will only see frames sent from or to the network card.
 This behaviour can depend on the specific network card and driver.
 
-
+<a id="injecting-frames"></a>
 ## Injecting Frames
 
 You can use [Scapy](https://scapy.readthedocs.io/en/latest/usage.html#wireless-frame-injection) to easily construct and inject raw Wi-Fi frames:
@@ -309,6 +313,8 @@ The precise behaviour of monitor mode (regarding retransmissions, acknowledgemen
 In practice, the network card itself may also overwrite certain fields.
 The only reliable method to detect this, and to assure that frames are properly injected, is by putting a second network card into monitor mode and to capture the frame that you injected.
 
+Note: when using simulated network interfaces using `mac80211_hwsim`, you cannot use the special `hwsim0`
+interface to inject frames. Frames must be injected using one of the "normal" `wlanX` interfaces.
 
 ## Capturing 802.11n/ac/ax traffic
 
