@@ -135,6 +135,12 @@ The parameter `-D nl80211` means the modern `nl80211` API is used to communicate
 The parameter `-i wlan` specifies the interface to use and `-c client.conf` the configuration of the network.
 Finally, `-dd -K` causes verbose debug output and causes encryption keys to be printed, respectively.
 
+## Compiling and starting IWD
+
+Another open-source Wi-Fi client/AP is Intel's [IWD](https://wiki.archlinux.org/title/iwd).
+
+**TODO: Explain how to easily compile and start IWD for experiments.**
+
 <a id="monitor-mode"></a>
 ## Enabling monitor mode
 
