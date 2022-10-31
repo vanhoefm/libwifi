@@ -6,7 +6,8 @@ This includes setting up a virtual test environment, understanding core Linux co
 
 ## Using simulated Wi-Fi interfaces
 
-On Linux you can create software simualted Wi-Fi interfaces to more easily and reliable perform certain Wi-Fi experiments.
+On Linux you can create software [simualted Wi-Fi interfaces](https://www.kernel.org/doc/html/latest/networking/mac80211_hwsim/mac80211_hwsim.html)
+to more easily and reliable perform certain Wi-Fi experiments.
 You can create simulated Wi-Fi interfaces with the following command:
 
 	modprobe mac80211_hwsim radios=4
