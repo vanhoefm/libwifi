@@ -6,7 +6,7 @@ This includes setting up a virtual test environment, understanding core Linux co
 
 ## Using simulated Wi-Fi interfaces
 
-On Linux you can create software [simualted Wi-Fi interfaces](https://www.kernel.org/doc/html/latest/networking/mac80211_hwsim/mac80211_hwsim.html)
+On Linux you can create software [simulated Wi-Fi interfaces](https://www.kernel.org/doc/html/latest/networking/mac80211_hwsim/mac80211_hwsim.html)
 to more easily and reliable perform certain Wi-Fi experiments.
 You can create simulated Wi-Fi interfaces with the following command:
 
@@ -22,12 +22,6 @@ When loading this module, a special interface called `hwsim0` will also be creat
 all frames coming through the simulated Wi-fi interfaces (over all channels). Enable the interface by executing
 `ifconfig hwsim0 up` or similar. It's automatically in [monitor mode](#monitor-mode) but you cannot use it to
 [inject frames](injecting-frames).
-
-## Using real Wi-Fi interfaces
-
-Some general tips when using real Wi-Fi dongles:
-- You can inspect the output of `dmesg` to assure the kernel recognized the Wi-Fi network card
-- `ifconfig` will only show the current active network interfaces. Use `ifconfig -a` to show _all_ network interfaces.
 
 <a id="id-disable-wifi"></a>
 ## Disabling Wi-Fi in your network manager
@@ -204,6 +198,13 @@ The output of `iw list` will also include the support bands (e.g. 2.4 and 5 GHz)
 If you want to look up information about a device before buying it you can use [WikiDevi](https://deviwiki.com/), or one of its mirrors, to get basic information about a device.
 It will for instance indicate the chipset and driver that a device uses.
 If you're lucky it might also contain the output of `iw list`.
+
+
+## Note on using real Wi-Fi interfaces
+
+Some general tips when using real Wi-Fi dongles:
+- You can inspect the output of `dmesg` to assure the kernel recognized the Wi-Fi network card
+- `ifconfig` will only show the current active network interfaces. Use `ifconfig -a` to show _all_ network interfaces.
 
 
 <a id="id-virtual-interface"></a>
