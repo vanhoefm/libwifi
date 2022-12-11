@@ -4,7 +4,6 @@
 # See README for more details.
 from scapy.all import *
 from scapy.arch.linux import L2Socket, attach_filter
-from Crypto.Cipher import AES
 from datetime import datetime
 import binascii
 
