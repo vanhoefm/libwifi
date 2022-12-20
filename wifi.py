@@ -163,6 +163,23 @@ def remove_dot11qos(p):
 	p.subtype = 0
 	return p
 
+def is_valid_sae_pk_password(pw):
+	if pw is None:
+		return False
+
+	pw = pw.strip('"')
+	if len(pw) < 14 or len(pw) % 5 != 4:
+		return False
+
+	should_be_dashes = pw[4::5]
+	if not all(c == "-" for c in should_be_dashes):
+		return False
+	if len(should_be_dashes) != pw.count("-"):
+		return False
+
+	#TODO: Verify that the checksum and Sec_1b matches
+	return True
+
 #### Packet Processing Functions ####
 
 class DHCP_sock(DHCP_am):
