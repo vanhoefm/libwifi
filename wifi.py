@@ -139,6 +139,14 @@ def set_monitor_mode(iface, up=True, mtu=1500):
 		subprocess.check_output(["ifconfig", iface, "up"])
 	subprocess.check_output(["ifconfig", iface, "mtu", str(mtu)])
 
+def set_monitor_active(iface):
+	try:
+		subprocess.check_output(["iw", iface, "set", "monitor", "active"])
+		return True
+	except subprocess.CalledProcessError:
+		log(WARNING, f"Interface {iface} doesn't support active monitor mode")
+		return False
+
 def rawmac(addr):
 	return bytes.fromhex(addr.replace(':', ''))
 
