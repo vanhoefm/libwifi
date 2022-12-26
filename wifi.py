@@ -257,12 +257,12 @@ if not "ORDER" in scapy.layers.dot11._rt_txflags:
 
 class MonitorSocket(L2Socket):
 	def __init__(self, iface, dumpfile=None, detect_injected=False, **kwargs):
-		super(MonitorSocket, self).__init__(iface, **kwargs)
 		self.pcap = None
-		if dumpfile:
-			self.pcap = PcapWriter("%s.%s.pcap" % (dumpfile, self.iface), append=False, sync=True)
 		self.detect_injected = detect_injected
 		self.default_rate = None
+		super(MonitorSocket, self).__init__(iface, **kwargs)
+		if dumpfile:
+			self.pcap = PcapWriter("%s.%s.pcap" % (dumpfile, self.iface), append=False, sync=True)
 
 	def set_channel(self, channel):
 		subprocess.check_output(["iw", self.iface, "set", "channel", str(channel)])
