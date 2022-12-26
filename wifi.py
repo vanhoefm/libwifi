@@ -343,6 +343,7 @@ class MonitorSocket(L2Socket):
 			return None
 
 		# Ignore reflection of injected frames. These contain TXFlags in the RadioTap header.
+		# FIXME: This also ignores Beacons generated on the same interface (at least with mac80211_hwsim).
 		if p[RadioTap].present & "TXFlags":
 			return None
 
