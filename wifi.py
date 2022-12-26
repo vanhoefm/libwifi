@@ -496,6 +496,17 @@ def get_element(el, id):
 		el = el.payload
 	return None
 
+def get_prev_element(p, id):
+	if not Dot11Elt in p: return None
+	curr = p[Dot11Elt]
+	prev = None
+	while not curr is None:
+		if curr.ID == id:
+			return prev
+		prev = curr
+		curr = curr.payload
+	return None
+
 def get_ssid(beacon):
 	if not (Dot11 in beacon or Dot11FCS in beacon): return
 	if Dot11Elt not in beacon: return
