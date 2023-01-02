@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2021, Mathy Vanhoef <mathy.vanhoef@nyu.edu>
+# Copyright (c) 2019-2023, Mathy Vanhoef <mathy.vanhoef@kuleuven.be>
 #
 # This code may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -12,6 +12,8 @@ import binascii
 FRAME_TYPE_MANAGEMENT = 0
 FRAME_TYPE_CONTROL    = 1
 FRAME_TYPE_DATA       = 2
+
+FRAME_CONTROL_ACK     = 13
 
 FRAME_DATA_NULLFUNC   = 4
 FRAME_DATA_QOSNULL    = 12
@@ -148,12 +150,95 @@ def set_monitor_mode(iface, up=True, mtu=1500):
 	subprocess.check_output(["ifconfig", iface, "mtu", str(mtu)])
 
 def set_monitor_active(iface):
+	# Interface must be down in order to set active flag
+	subprocess.check_output(["ifconfig", iface, "down"])
 	try:
 		subprocess.check_output(["iw", iface, "set", "monitor", "active"])
 		return True
 	except subprocess.CalledProcessError:
 		log(WARNING, f"Interface {iface} doesn't support active monitor mode")
 		return False
+
+def set_managed_mode(iface, up=True):
+	# Always put it down. This needs to be done to change the type
+	subprocess.check_output(["ifconfig", iface, "down"])
+	subprocess.check_output(["iw", iface, "set", "type", "managed"])
+	if up:
+		subprocess.check_output(["ifconfig", iface, "up"])
+
+def set_ap_mode(iface, up=True):
+	# Always put it down. This also assure it will stop broadcasting beacons.
+	subprocess.check_output(["ifconfig", iface, "down"])
+	if get_iface_type(iface) != "AP":
+		try:
+			# When using "iw iface set type ap" it claims that a daemon like hostapd is
+			# required. But by using "iw iface set type __ap" we can set it in AP mode.
+			subprocess.check_output(["iw", iface, "set", "type", "__ap"])
+		except subprocess.CalledProcessError:
+			return False
+
+	if up:
+		subprocess.check_output(["ifconfig", iface, "up"])
+
+	return True
+
+def start_ap(iface, channel, beacon=None, ssid=None, interval=100, dtim_period=1):
+	"""
+	Put the interface in AP mode (if not yet done) and start broadcasting beacons.
+	All other AP functionality would require a deamon or manual nl80211 calls.
+
+	@param iface	Interface to put in AP mode
+	@param channel	Channel to use (an integer)
+	@param beacon	Optional: beacon to broadcast. Should contain a full beacon including all MAC addresses.
+	@param ssid		Optional: override the SSID that is given to the kernel. I'm not sure why this parameter
+	                is important and can be given to the kernel. The advertised SSID is taken from the beacon
+	                and is not influenced by this parameter.
+	@param interval	How often to broadcast the beacon (in TU). Maximum allowed value by Linux is 10000.
+	"""
+
+	# Use minimal beacon if not given. Otherwise copy beacon so the given beacon isn't modified.
+	if beacon == None:
+		ownmac = get_macaddress(iface)
+		beacon = Dot11(addr2=ownmac, addr3=ownmac)/Dot11Beacon()
+	else:
+		beacon = beacon.copy()
+
+	# In order of priority use the provided ssid, the ssid in the beacon, or a default one.
+	if ssid == None:
+		ssid = get_ssid(beacon)
+	if ssid == None:
+		ssid = "libwifi-ap-" + get_macaddress(iface)
+
+	# Find the TIM element so we can construct the beacon "head" and "tail" that is
+	# before and after the TIM element.
+	prev_tim = get_prev_element(beacon, IEEE_TLV_TYPE_TIM)
+	if prev_tim != None:
+		after_tim = prev_tim.payload.payload
+		prev_tim.remove_payload()
+	else:
+		after_tim = None
+
+	# iw dev <devname> ap start  <SSID> <control freq> [5|10|20|40|80|80+80|160] [<center1_freq> [<center2_freq>]]
+	#		<beacon interval in TU> <DTIM period> [hidden-ssid|zeroed-ssid] head <beacon head in hexadecimal>
+	#		[tail <beacon tail in hexadecimal>] [inactivity-time <inactivity time in seconds>] [key0:abcde d:1:6162636465]
+	cmd = ["iw", "dev", iface, "ap", "start", ssid, str(chan2freq(channel)), str(interval), str(dtim_period), "head", raw(beacon).hex()]
+	if after_tim != None:
+		cmd += ["tail", raw(after_tim).hex()]
+
+	# Do the real magic: interface in AP mode and start broadcasting beacons
+	set_ap_mode(iface)
+	log(STATUS, f"Starting AP using: {' '.join(cmd)}")
+	subprocess.check_output(cmd)
+
+	# With rt2800usb we need to execute "ifconfig wlan0 up" after "ap start" to make the
+	# interface acknowledge recieved frames. Otherwise it wouldn't send ACKs. So to be sure,
+	# do this for all interfaces.
+	subprocess.check_output(["ifconfig", iface, "up"])
+
+def stop_ap(iface):
+	cmd = ["iw", "dev", iface, "ap", "stop"]
+	log(STATUS, f"Stopping AP using: {' '.join(cmd)}")
+	subprocess.check_output(cmd)
 
 def rawmac(addr):
 	return bytes.fromhex(addr.replace(':', ''))
