@@ -265,7 +265,7 @@ def test_injection(iface_out, iface_in=None, peermac=None, ownmac=None, testack=
 		log(WARNING, f"                    interferes with injection, but it cannot check the behaviour of the network card itself.")
 		if driver_out in ["mt76x2u"]:
 			log(WARNING, f"                    WARNING: self-test with the {driver_out} driver can be unreliable.")
-		elif not driver_out in ["iwlwifi", "ath9k_htc", "mac80211_hwsim"]:
+		elif not driver_out in ["iwlwifi", "ath9k_htc", "mac80211_hwsim", "rt2800usb"]:
 			log(WARNING, f"                    WARNING: it is unknown whether a self-test is reliable with the {driver_out} driver.")
 
 		sin = sout
