@@ -92,8 +92,8 @@ def capture_probe_response_ack(sout, sin, probe_req, count=0, retries=1):
 
 #### Injection tests ####
 
-def test_injection_fragment(sout, sin, ref, strtype):
-	log(STATUS, f"--- Testing injection of fragmented frame using {strtype}")
+def test_injection_more_fragments(sout, sin, ref, strtype):
+	log(STATUS, f"--- Testing injection of frame with more fragments flag using {strtype}")
 	p = Dot11(FCfield=ref.FCfield, addr1=ref.addr1, addr2=ref.addr2, type=2, subtype=8, SC=33<<4)
 	p = p/Dot11QoS(TID=2)/LLC()/SNAP()/EAPOL()/EAP()
 	p.FCfield |= Dot11(FCfield="MF").FCfield
@@ -228,7 +228,7 @@ def test_injection_txack(sout, sin, destmac, ownmac):
 
 	log(STATUS, f"Captured {len(rx_probes)} probe responses and {len(tx_acks)} ACKs in response.")
 	if len(rx_probes) == 0:
-		log(ERROR, "Didn't recieve a probe response to test ack generation.")
+		log(ERROR, "Didn't recieve a probe response to test ack generation. Re-run the test.")
 		return FLAG_NOCAPTURE
 	elif len(tx_acks) == 0:
 		log(WARNING, "[-] Acknowledgement frames aren't sent when recieving a frame.")
