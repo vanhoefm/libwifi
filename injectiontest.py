@@ -292,6 +292,9 @@ def test_injection(iface_out, iface_in=None, peermac=None, ownmac=None, testack=
 	# so set one of them as well.
 	spoofed = Dot11(FCfield="from-DS", addr1="00:11:00:00:02:01", addr2="00:22:00:00:02:01")
 	valid = Dot11(FCfield="from-DS", addr1=peermac, addr2=ownmac)
+	if iface_in != None:
+		log(STATUS, f"NOTE: Frames sent using a (partly) valid MAC address may be harder to capture due to higher bitrates.")
+		log(STATUS, f"      Connecting using old Wi-Fi versions such as 802.11b can help with capturing injected frames.")
 
 	# Test injection of More Fragment flags. Causes some device to crash, so make it
 	# possible to easily skip this test.
