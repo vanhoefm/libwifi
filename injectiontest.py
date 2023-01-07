@@ -240,7 +240,7 @@ def test_injection_txack(sout, sin, destmac, ownmac):
 
 #### Main test function ####
 
-def test_injection(iface_out, iface_in=None, peermac=None, ownmac=None, testack=True):
+def test_injection(iface_out, iface_in=None, peermac=None, ownmac=None, testack=True, skip_mf=False):
 	"""
 	@param iface_out	Interface used to inject frames
 	@param iface_in		Interface used to capture injected frames. If not given, the
@@ -293,9 +293,11 @@ def test_injection(iface_out, iface_in=None, peermac=None, ownmac=None, testack=
 	spoofed = Dot11(FCfield="from-DS", addr1="00:11:00:00:02:01", addr2="00:22:00:00:02:01")
 	valid = Dot11(FCfield="from-DS", addr1=peermac, addr2=ownmac)
 
-	# This tests basic injection capabilities
-	status |= test_injection_fragment(sout, sin, spoofed, "spoofed MAC addresses")
-	status |= test_injection_fragment(sout, sin, valid, "(partly) valid MAC addresses")
+	# Test injection of More Fragment flags. Causes some device to crash, so make it
+	# possible to easily skip this test.
+	if not skip_mf:
+		status |= test_injection_more_fragments(sout, sin, spoofed, "spoofed MAC addresses")
+		status |= test_injection_more_fragments(sout, sin, valid, "(partly) valid MAC addresses")
 
 	# Perform some actual injection tests
 	status |= test_injection_fields(sout, sin, spoofed, "spoofed MAC addresses")
