@@ -44,8 +44,13 @@ def inject_and_capture(sout, sin, p, count=0, retries=1):
 		# Note: this workaround for Intel is only needed if the fragmented frame is injected using
 		#       valid MAC addresses. But for simplicity just execute it after any fragmented frame.
 		if sout.mf_workaround and toinject.FCfield & Dot11(FCfield="MF").FCfield != 0:
-			sout.send(RadioTap(present="TXFlags", TXFlags="NOSEQ+ORDER")/Dot11())
-			log(DEBUG, "Sending dummy frame after injecting frame with MF flag set")
+			fix = Dot11(type=p.type, subtype=p.subtype)
+			# Note: for RT5572 the workaround is always needed. Additionally, we need to send
+			#       the dummy frame using the same QoS TID. Just use same QoD TID for all devices.
+			if Dot11QoS in p:
+				fix = fix/Dot11QoS(TID=p[Dot11QoS].TID)
+			sout.send(RadioTap(present="TXFlags", TXFlags="NOSEQ+ORDER")/fix)
+			log(DEBUG, f"Sending dummy frame after injecting frame with MF flag set: {repr(fix)}")
 
 		# 1. When using a 2nd interface: capture the actual packet that was injected in the air.
 		# 2. Not using 2nd interface: capture the "reflected" frame sent back by the kernel. This allows
@@ -254,7 +259,7 @@ def test_injection(iface_out, iface_in=None, peermac=None, ownmac=None, testack=
 	driver_out = get_device_driver(iface_out)
 
 	# Workaround to properly inject fragmented frames (and prevent it from blocking Tx queue).
-	sout.mf_workaround = driver_out in ["iwlwifi", "ath9k_htc"]
+	sout.mf_workaround = driver_out in ["iwlwifi", "ath9k_htc", "rt2800usb"]
 	if sout.mf_workaround:
 		log(WARNING, f"Detected {driver_out}, using workaround to reliably inject fragmented frames.")
 
