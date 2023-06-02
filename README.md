@@ -1,6 +1,7 @@
 # libwifi
 
 This is an experimental Python3 library with various utility functions for Scapy and Wi-Fi.
+This repository will also contain tutorials and documentation related to doing Wi-Fi research.
 
 The provided functions are currently not explicitly documented so you will have to read the code itself to get an idea of which functions all exist.
 
