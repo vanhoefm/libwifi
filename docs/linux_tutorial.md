@@ -134,7 +134,7 @@ Finally, `-dd -K` causes verbose debug output and causes encryption keys to be p
 
 Another open-source Wi-Fi client/AP is Intel's [IWD](https://wiki.archlinux.org/title/iwd).
 
-**TODO: Explain how to easily compile and start IWD for experiments.**
+See [iwd_usage.md](iwd_usage.md) on how to compile and use it on Linux.
 
 <a id="monitor-mode"></a>
 ## Enabling monitor mode
