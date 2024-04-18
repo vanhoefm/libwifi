@@ -47,3 +47,21 @@ Execute `help` for a list of commands.
 The [IWD Arch Linux](https://wiki.archlinux.org/title/iwd) documentation contains examples how to configure networks.
 For interprise networks, IWD supports loading `.pem` files but not `.crt` files, and it currently only supports RSA certificates (not ECC).
 
+
+# Access Point Mode
+
+IWD has experimental support for AP mode. To create a network called testnetwork, create a file called `/var/lib/iwd/ap/testnetwork.ap` with the following content:
+
+	[Security]
+	Passphrase=password123
+
+ 	[IPv4]
+	Address=192.168.250.1
+	Gateway=192.168.250.1
+	Netmask=255.255.255.0
+	DNSList=8.8.8.8
+
+To use a different SSID you have to change the name of the above file. To make IWD switch to AP mode and create this network, run `./client/iwctl` and execute:
+
+	device wlan0 set-property Mode ap
+ 	ap wlan0 start-profile testnetwork
