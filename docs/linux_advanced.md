@@ -157,3 +157,11 @@ Sometimes it may be usefull to disable or override the MAC address randomization
 You can either disable this in your network manager or manually set the MAC address of an interface:
 
 	sudo macchanger -m 00:11:22:33:44:44 wlan0
+
+	
+### Wi-Fi Communication between VMs
+
+See [vwifi](https://github.com/Raizo62/vwifi) which is part of the
+[Live Raizo - Linux for Virtual SysAdmin](https://sourceforge.net/projects/live-raizo/).
+
+
