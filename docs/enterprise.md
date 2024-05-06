@@ -6,7 +6,7 @@ We're going to use SVN to export the relevant directory from the freeradius gith
 	# Navigate to the hostapd/ directory in the hostap repository
 	cd hostapd
 	svn export https://github.com/FreeRADIUS/freeradius-server/trunk/raddb/certs
-	cd certs
+	cd freeradius-server/raddb/certs
 	# Optionally change certificate parameters by editing the *.cnf files
 	./bootstrap
 
@@ -17,9 +17,9 @@ Now update your hostapd.conf with the following parameters (by adding lines or c
 	ieee8021x=1
 	eap_server=1
 	eap_user_file=hostapd.eap_user
-	ca_cert=certs/ecc/ca.pem
-	server_cert=certs/ecc/server.pem
-	private_key=certs/ecc/server.key
+	ca_cert=freeradius-server/raddb/certs/ecc/ca.pem
+	server_cert=freeradius-server/raddb/certs/ecc/server.pem
+	private_key=freeradius-server/raddb/certs/ecc/server.key
 	private_key_passwd=whatever
 	wpa=2
 	wpa_key_mgmt=WPA-EAP
