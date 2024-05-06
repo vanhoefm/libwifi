@@ -642,8 +642,8 @@ def create_msdu_subframe(src, dst, payload, last=False):
 
 	return p / payload / Raw(padding)
 
-def find_network(iface, ssid, opened_socket):
-	log(STATUS, "Searching for target network...")
+def find_network(iface, ssid, opened_socket=None):
+	log(STATUS, f"Searching for target network {ssid} ...")
 	for chan in [None, 1, 6, 11, 3, 8, 2, 7, 4, 10, 5, 9, 12, 13]:
 		# We first search on the current channel that the network card is on
 		if chan != None:
