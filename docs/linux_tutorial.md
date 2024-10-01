@@ -87,7 +87,7 @@ Compile `wpa_supplicant`:
 	make -j 4
 	cd ..
 
-When compiling both `hostapd` and `wpa_supplicant` it's important to execute `make clean` before compiling. Otherwise the compilation might file.
+When compiling both `hostapd` and `wpa_supplicant` it's important to execute `make clean` before compiling. Otherwise the compilation might fail.
 Note that executing `make clean` won't delete the compiled `hostapd` or `wpa_supplicant` executable.
 
 
