@@ -164,6 +164,27 @@ See the [Wi-Fi Testing Framework](https://github.com/domienschepers/wifi-framewo
 for an example on how you can extend the control interface when performing experiments
 or tests using hostap.
 
+## Events
+
+The daemon will also send events over the control interface. One example is that, when
+connecting to an Enterprise network, the following event is sent over the named socket:
+```
+#define 	WPA_EVENT_EAP_PEER_CERT   "CTRL-EVENT-EAP-PEER-CERT "
+```
+This event contains information about the certificate used by the RADIUS server of
+the Enterprise Wi-Fi networks. This is sent by the function `wpas_notify_certification`
+in [`wpa_supplicant/notify.c`](https://w1.fi/cgit/hostap/tree/wpa_supplicant/notify.c).
+A similar event is also sent over the D-BUS control interface.
+
+Note that [Android added its own interface to hostap](https://source.android.com/docs/core/connect/wifi-hal)
+whose latest implementation is made using AIDL. For instance, in the function `wpas_notify_certification`,
+the Android port of `wpa_supplicant` will call [`wpas_aidl_notify_ceritification`](https://cs.android.com/android/platform/superproject/main/+/main:external/wpa_supplicant_8/wpa_supplicant/notify.c;l=976;drc=9a47c375380b347f6eaadde0a549af066731a079).
+This is then further handled in [`InsecureEapNetworkHandler.java`](https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Wifi/service/java/com/android/server/wifi/InsecureEapNetworkHandler.java;drc=262fabad218484b6240dc1124e91e1f488d244ae;l=258)
+and [`WifiConfigManager.java`](https://cs.android.com/android/platform/superproject/+/android14-qpr3-release:packages/modules/Wifi/service/java/com/android/server/wifi/WifiConfigManager.java;l=4362?q=AltSubjectMatch)
+to, for instance, implement Trust-On-First-Use for Enterprise authentication by setting the
+network option [`ca_cert`](https://w1.fi/cgit/hostap/tree/wpa_supplicant/wpa_supplicant.conf?h=hostap_2_11#n1251)
+to the hash value extracted from the event.
+
 ## Interactive Requests
 
 If wpa_supplicant needs additional information during authentication (e.g., password),
