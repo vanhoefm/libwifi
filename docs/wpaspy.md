@@ -72,7 +72,7 @@ commands that are forwarded to the `wpa_supplicant` or `hostapd_cli` daemon,
 respectively. For instance, the command `status` causes the raw command `STATUS`
 to be sent to the daemon.
 
-## Overview of Commands
+## Overview of Raw Commands
 
 The most complete list of commands can be obtained by reading the source code:
 
@@ -94,16 +94,69 @@ to inject raw frames. For instance, this approach is used in the
 [Wi-Fi Testing Framework](https://github.com/domienschepers/wifi-framework), in the
 [FragAttacks Tool](https://github.com/vanhoefm/fragattacks), the
 [MacStealery Tool](https://github.com/vanhoefm/macstealer), and so on.
-
-To easily connect to the control interface and send commands, you can use the
+**To easily connect to the control interface and send commands, you can use the
 [wpaspy.py](https://w1.fi/cgit/hostap/tree/wpaspy/wpaspy.py) library that is part of the
-hostap repository.
+hostap repository**.
 
-**TODO: Very basic example on starting hostapd/wpa_supplicant, connect to control interface, do basic things**
+As a very basic and motivating example, you can now use a Python script to start
+`wpa_supplicant` and to connect to the control interface. Here the `client.conf`
+file from above is used:
+```python
+#!/usr/bin/env python3
+from wpaspy import Ctrl
+import time, subprocess
 
-**TODO: Now reference the Wi-Fi Testing Framework GENERIC TEST CASE: get IP, packet processing**
+# Remove old occurrences of the control interface that didn't get cleaned properly
+subprocess.call(["rm", "-rf", "wpaspy_ctrl/"])
 
-**TODO: Now explain trigger-based approach for Wi-Fi Testing Framework**
+# -W parameter makes wpa_supplicant pause on startup until we connect to control interface
+nic_iface = "wlan2"
+cmd = ["wpa_supplicant", "-Dnl80211", "-i", nic_iface, "-c", "client.conf", "-W", "-dd"]
+process = subprocess.Popen(cmd)
+time.sleep(1)
+
+# Connect to the control interface
+wpaspy_ctrl = Ctrl("wpaspy_ctrl/" + nic_iface)
+wpaspy_ctrl.attach()
+
+# Example commands: disable all networks, then connect to first network in client.conf
+wpaspy_ctrl.request("DISABLE_NETWORK all")
+wpaspy_ctrl.request("SELECT_NETWORK 0")
+
+# Let wpa_supplicant run for 10 seconds and then exit
+time.sleep(10)
+wpaspy_ctrl.request("TERMINATE")
+process.wait()
+```
+By starting the above Python script, `wpa_supplicant` starts and automatically some
+commands are sent over the control interface. This approach typically makes it
+easier to perform Wi-Fi commands since you don't need to run separate commands.
+You can now also combine this with the creation of monitor interface and then using
+[Scapy](https://scapy.net/) to inject Wi-Fi frames.
+
+In several experiments, you require more than simply controlling the daemon. For instance,
+it may also be necessary to create and configure a monitor interface, get an IP address
+using DHCP, have an event loop in the Python script to react to incoming packets and events
+from the daemon, and so on. Fortunately, these extra functionalities are already provided
+by the [Wi-Fi Testing Framework](https://github.com/domienschepers/wifi-framework). This
+framework also relies on the control interface of hostap but already has code to handle some
+of the previously mentioned tasks. Additionally, it has some extra control interface commands
+that have been added to `wpa_supplicant` and `hostapd`.
+
+Depending on the functionality that you require, there are three aways to use the Wi-Fi
+Testing Framework:
+
+1. You can **write your own Python code from scratch**, similar to the above code, but use the
+   `wpa_supplicant` or `hostapd` version from the testing framework. This has as advantage
+   that some extra control commands are available.
+2. You can **use the framework to write [generic test cases](https://github.com/domienschepers/wifi-framework/blob/master/docs/USAGE.md#generic-test-cases)**.
+   This provides code to start the daemon, send commands more reliably, and receive responses.
+   However, you would for instance still need to add code to request an IP address using DHCP.
+3. You can **use the [action-based test cases](https://github.com/domienschepers/wifi-framework/blob/master/docs/USAGE.md#action-based-test-cases)**.
+   These allow you to perform a lot of operations automatically. For instance, the daemon gets
+   started automatically, you can very easily request an IP address, you can wait for an event
+   to complete, etc. The downside is that more complex scenarios are more difficult to model
+   in action-based test cases.
 
 ## Extending the Control Interface
 
