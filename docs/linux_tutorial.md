@@ -1,13 +1,13 @@
 # Linux Wi-Fi Tutorial
 
-This tutorial explain the basics of Wi-Fi packet injection on Linux.
+This tutorial explains the basics of Wi-Fi packet injection on Linux.
 This includes setting up a virtual test environment, understanding core Linux concepts regarding packet injection, introducing the basics of Scapy, and some common mistakes to avoid.
 
 
 ## Using simulated Wi-Fi interfaces
 
 On Linux you can create software [simulated Wi-Fi interfaces](https://www.kernel.org/doc/html/latest/networking/mac80211_hwsim/mac80211_hwsim.html)
-to more easily and reliable perform certain Wi-Fi experiments.
+to more easily and reliably perform certain Wi-Fi experiments.
 You can create simulated Wi-Fi interfaces with the following command:
 
 	modprobe mac80211_hwsim radios=4
@@ -40,12 +40,12 @@ After disabling Wi-Fi in your network manager, you will have to execute the foll
 	rfkill unblock wifi
 
 Alternatively, you can blacklist the MAC address of your Wi-Fi dongle so that Linux will automatically ignore the Wi-Fi dongle.
-The advantage is that you can still use other Wi-Fi interface to connect to the internet. To blacklist a MAC address, add the [following lines](https://wiki.archlinux.org/index.php/NetworkManager#Ignore_specific_devices) to the file `/etc/NetworkManager/NetworkManager.conf`:
+The advantage is that you can still use other Wi-Fi interfaces to connect to the internet. To blacklist a MAC address, add the [following lines](https://wiki.archlinux.org/index.php/NetworkManager#Ignore_specific_devices) to the file `/etc/NetworkManager/NetworkManager.conf`:
 
 	[keyfile]
 	unmanaged-devices=mac:02:00:00:00:00:00
 
-Replace `02:00:00:00:00:00` with the MAC addess of your Wi-Fi dongle and then reboot Linux.
+Replace `02:00:00:00:00:00` with the MAC address of your Wi-Fi dongle and then reboot Linux. You can also use this to make the NetworkManager ignore certain virtualized Wi-Fi interfaces, such that those interfaces can be used directly with wpa_supplicant or hostap, while the other virtualized Wi-fi interfaces remain managed by the NetworkManager. For instance, you can blacklist an interface, use hostapd to create a network on that interface, and then this network created by hostapd should be visible in the Network Manager on the other virtualized interfaces.
 
 If after doing all these steps you still notice interference from other programs, try to execute one of the following commands:
 
