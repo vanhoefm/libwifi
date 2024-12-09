@@ -1,12 +1,12 @@
 # Configuring Enterprise Networks
 
-The easiest way to generate certificates is using the scripts for freeradius.
-We're going to use SVN to export the relevant directory from the freeradius github repository:
+The easiest way to generate certificates is using the scripts for freeradius:
 
 	# Navigate to the hostapd/ directory in the hostap repository
 	cd hostapd
-	svn export https://github.com/FreeRADIUS/freeradius-server/trunk/raddb/certs
-	cd freeradius-server/raddb/certs
+	wget https://github.com/FreeRADIUS/freeradius-server/releases/download/release_3_2_6/freeradius-server-3.2.6.tar.bz2
+ 	tar -xvf freeradius-server-3.2.6.tar.bz2
+	cd freeradius-server-3.2.6/raddb/certs
 	# Optionally change certificate parameters by editing the *.cnf files
 	./bootstrap
 
