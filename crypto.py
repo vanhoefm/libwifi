@@ -76,6 +76,8 @@ def ccmp_get_aad(p, amsdu_spp=False):
 	addr2 = addr2bin(p.addr2)
 	addr3 = addr2bin(p.addr3)
 	aad = fc + addr1 + addr2 + addr3 + sc
+	if p.addr4 != None:
+		aad += addr2bin(p.addr4)
 	if Dot11QoS in p:
 		if not amsdu_spp:
 			# Everything except the TID is masked
