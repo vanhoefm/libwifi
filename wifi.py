@@ -134,6 +134,21 @@ def get_iface_type(iface):
 	p = re.compile("type (\w+)")
 	return str(p.search(output).group(1))
 
+def add_virtual_monitor(iface):
+	# Create second virtual interface in monitor mode. Note: some kernels
+	# don't support interface names of 15+ characters.
+	nic_mon = "mon" + iface[:12]
+
+	# Only create a new monitor interface if it does not yet exist
+	try:
+		scapy.arch.get_if_index(nic_mon)
+	except (IOError, OSError) as ex:
+		subprocess.call(["iw", nic_mon, "del"], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+		subprocess.check_output(["iw", iface, "interface", "add", nic_mon, "type", "monitor"])
+
+	return nic_mon
+
+
 def set_monitor_mode(iface, up=True, mtu=1500):
 	# Note: we let the user put the device in monitor mode, such that they can control optional
 	#       parameters such as "iw wlan0 set monitor active" for devices that support it.
