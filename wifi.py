@@ -141,8 +141,8 @@ def add_virtual_monitor(iface):
 
 	# Only create a new monitor interface if it does not yet exist
 	try:
-		scapy.arch.get_if_index(nic_mon)
-	except (IOError, OSError) as ex:
+		scapy.arch.get_if_addr(nic_mon)
+	except (ValueError) as ex:
 		subprocess.call(["iw", nic_mon, "del"], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
 		subprocess.check_output(["iw", iface, "interface", "add", nic_mon, "type", "monitor"])
 
