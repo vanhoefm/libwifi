@@ -19,7 +19,7 @@ The above command will only work if your Linux distribution (by default) provide
 See [backport drivers](#id-backport-drivers) to manually compile this kernel module.
 
 When loading this module, a special interface called `hwsim0` will also be created. This special interface captures
-all frames coming through the simulated Wi-fi interfaces (over all channels). Enable the interface by executing
+all frames coming through the simulated Wi-Fi interfaces (over all channels). Enable the interface by executing
 `ifconfig hwsim0 up` or similar. It's automatically in [monitor mode](#monitor-mode) but you cannot use it to
 [inject frames](injecting-frames).
 
