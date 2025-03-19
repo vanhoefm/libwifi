@@ -273,7 +273,7 @@ When you inject a raw Wi-Fi frame in monitor mode, you will see this frame twice
 The first frame is the one as injected by the userspace program or script, and the second frame is the one that was actually sent.
 There can be slight differences between these frames: the Linux kernel might overwrite certain fields (e.g. it will add a FCS and might overwrite the duration field).
 
-When injecting a Wi-Fi frame with a unicast reciever address the network card _might_ automatically retransmit the frame.
+When injecting a Wi-Fi frame with a unicast receiver address the network card _might_ automatically retransmit the frame.
 These retransmissions will not be shown in Wireshark. For instance, when injecting a probe request with as receiver 00:FF:FF:FF:FF:11 you will see:
 
 ![We see the injected frame and its first transmission](injected_unicast.png)
@@ -286,10 +286,10 @@ When using a second independent network card to capture the injected frame, we w
 ![The frame was retransmitted 15 times](injected_retrans.png)
 
 Frames with a broadcast receiver address are (normally) only transmitted once when injected.
-Note that some network cards may continue to retransmit a frame even though an acknowledgement was recieved.
+Note that some network cards may continue to retransmit a frame even though an acknowledgement was received.
 This behaviour depends on the specific network card being used.
 
-When another device send a frame with as receiver address the MAC address of the interface in monitor mode, then _some_ network cards may automatically send an acknowledgement (e.g. some Atheros cards).
+When another device sends a frame with as receiver address the MAC address of the interface in monitor mode, then _some_ network cards may automatically send an acknowledgement (e.g. some Atheros cards).
 Other network cards won't send an acknowledgement, causing the sender to retransmit the frame.
 
 Advanced monitor and injection parameters are also available.
