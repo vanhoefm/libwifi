@@ -45,7 +45,7 @@ The advantage is that you can still use other Wi-Fi interfaces to connect to the
 	[keyfile]
 	unmanaged-devices=mac:02:00:00:00:00:00
 
-Replace `02:00:00:00:00:00` with the MAC address of your Wi-Fi dongle and then reboot Linux. You can also use this to make the NetworkManager ignore certain virtualized Wi-Fi interfaces, such that those interfaces can be used directly with wpa_supplicant or hostap, while the other virtualized Wi-Fi interfaces remain managed by the NetworkManager. For instance, you can blacklist an interface, use hostapd to create a network on that interface, and then this network created by hostapd should be visible in the Network Manager on the other virtualized interfaces.
+Replace `02:00:00:00:00:00` with the MAC address of your Wi-Fi dongle and then reboot Linux. You can also use this to make the NetworkManager ignore certain virtualized Wi-Fi interfaces, such that those interfaces can be used directly with wpa_supplicant or hostapd, while the other virtualized Wi-Fi interfaces remain managed by the NetworkManager. For instance, you can blacklist an interface, use hostapd to create a network on that interface, and then this network created by hostapd should be visible in the Network Manager on the other virtualized interfaces.
 
 If after doing all these steps you still notice interference from other programs, try to execute one of the following commands:
 
@@ -57,7 +57,7 @@ If after doing all these steps you still notice interference from other programs
 	pkill wpa_supplicant
 
 
-## Compiling wpa_supplicant and hostap
+## Compiling wpa_supplicant and hostapd
 
 First install some common dependencies:
 
