@@ -13,8 +13,8 @@ You can create simulated Wi-Fi interfaces with the following command:
 	modprobe mac80211_hwsim radios=4
 
 This will create 4 simulated Wi-Fi interfaces.
-Here `mac80211_hwsim` represents a kernel module that will simulate the Wi-Fi interaces.
-The `modeprobe` command is used to load this kernel module.
+Here `mac80211_hwsim` represents a kernel module that will simulate the Wi-Fi interfaces.
+The `modprobe` command is used to load this kernel module.
 The above command will only work if your Linux distribution (by default) provides the `mac80211_hwsim` kernel module.
 See [backport drivers](#id-backport-drivers) to manually compile this kernel module.
 
