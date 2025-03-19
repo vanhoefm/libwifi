@@ -71,7 +71,7 @@ Get the latest development version of the hostap project, which provides both `w
 
 	git clone git://w1.fi/srv/git/hostap.git
 
-Compile hostapd:
+Compile `hostapd`:
 
 	cd hostapd
 	cp defconfig .config
@@ -127,7 +127,7 @@ And start the client using:
 	wpa_supplicant -D nl80211 -i wlan1 -c client.conf -dd -K
 
 The parameter `-D nl80211` means the modern `nl80211` API is used to communicate with the kernel.
-The parameter `-i wlan` specifies the interface to use and `-c client.conf` the configuration of the network.
+The parameter `-i wlan1` specifies the interface to use and `-c client.conf` the configuration of the network.
 Finally, `-dd -K` causes verbose debug output and causes encryption keys to be printed, respectively.
 
 ## Compiling and starting IWD
@@ -147,7 +147,7 @@ To put a Wi-Fi interface into monitor mode execute:
 	ifconfig wlan0 up
 	iw wlan0 set channel 6
 
-Remember to [disable Wi-Fi in your network manager](id-disable-wifi) so it will not interfere with the test tool.
+Remember to [disable Wi-Fi in your network manager](#id-disable-wifi) so it will not interfere with the test tool.
 As an alternative to the above commands you can also use:
 
 	sudo airmon-ng start wlan0
@@ -175,7 +175,7 @@ The above output indicates that monitor mode is supported.
 
 ## Interface Capabilities
 
-Not all Wi-Fi netword cards support the same features.
+Not all Wi-Fi network cards support the same features.
 Execute `iw list` to output all the capabilities of the interface.
 For instance, not all network cards can be used to create an access point.
 This is only possible when `AP` is listed as a supported interface mode, for instance:
