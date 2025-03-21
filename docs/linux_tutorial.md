@@ -13,13 +13,13 @@ You can create simulated Wi-Fi interfaces with the following command:
 	modprobe mac80211_hwsim radios=4
 
 This will create 4 simulated Wi-Fi interfaces.
-Here `mac80211_hwsim` represents a kernel module that will simulate the Wi-Fi interaces.
-The `modeprobe` command is used to load this kernel module.
+Here `mac80211_hwsim` represents a kernel module that will simulate the Wi-Fi interfaces.
+The `modprobe` command is used to load this kernel module.
 The above command will only work if your Linux distribution (by default) provides the `mac80211_hwsim` kernel module.
 See [backport drivers](#id-backport-drivers) to manually compile this kernel module.
 
 When loading this module, a special interface called `hwsim0` will also be created. This special interface captures
-all frames coming through the simulated Wi-fi interfaces (over all channels). Enable the interface by executing
+all frames coming through the simulated Wi-Fi interfaces (over all channels). Enable the interface by executing
 `ifconfig hwsim0 up` or similar. It's automatically in [monitor mode](#monitor-mode) but you cannot use it to
 [inject frames](injecting-frames).
 
@@ -45,7 +45,7 @@ The advantage is that you can still use other Wi-Fi interfaces to connect to the
 	[keyfile]
 	unmanaged-devices=mac:02:00:00:00:00:00
 
-Replace `02:00:00:00:00:00` with the MAC address of your Wi-Fi dongle and then reboot Linux. You can also use this to make the NetworkManager ignore certain virtualized Wi-Fi interfaces, such that those interfaces can be used directly with wpa_supplicant or hostap, while the other virtualized Wi-fi interfaces remain managed by the NetworkManager. For instance, you can blacklist an interface, use hostapd to create a network on that interface, and then this network created by hostapd should be visible in the Network Manager on the other virtualized interfaces.
+Replace `02:00:00:00:00:00` with the MAC address of your Wi-Fi dongle and then reboot Linux. You can also use this to make the NetworkManager ignore certain virtualized Wi-Fi interfaces, such that those interfaces can be used directly with wpa_supplicant or hostapd, while the other virtualized Wi-Fi interfaces remain managed by the NetworkManager. For instance, you can blacklist an interface, use hostapd to create a network on that interface, and then this network created by hostapd should be visible in the Network Manager on the other virtualized interfaces.
 
 If after doing all these steps you still notice interference from other programs, try to execute one of the following commands:
 
@@ -57,7 +57,7 @@ If after doing all these steps you still notice interference from other programs
 	pkill wpa_supplicant
 
 
-## Compiling wpa_supplicant and hostap
+## Compiling wpa_supplicant and hostapd
 
 First install some common dependencies:
 
@@ -71,7 +71,7 @@ Get the latest development version of the hostap project, which provides both `w
 
 	git clone git://w1.fi/srv/git/hostap.git
 
-Compile hostapd:
+Compile `hostapd`:
 
 	cd hostapd
 	cp defconfig .config
@@ -127,7 +127,7 @@ And start the client using:
 	wpa_supplicant -D nl80211 -i wlan1 -c client.conf -dd -K
 
 The parameter `-D nl80211` means the modern `nl80211` API is used to communicate with the kernel.
-The parameter `-i wlan` specifies the interface to use and `-c client.conf` the configuration of the network.
+The parameter `-i wlan1` specifies the interface to use and `-c client.conf` the configuration of the network.
 Finally, `-dd -K` causes verbose debug output and causes encryption keys to be printed, respectively.
 
 ## Compiling and starting IWD
@@ -147,7 +147,7 @@ To put a Wi-Fi interface into monitor mode execute:
 	ifconfig wlan0 up
 	iw wlan0 set channel 6
 
-Remember to [disable Wi-Fi in your network manager](id-disable-wifi) so it will not interfere with the test tool.
+Remember to [disable Wi-Fi in your network manager](#id-disable-wifi) so it will not interfere with the test tool.
 As an alternative to the above commands you can also use:
 
 	sudo airmon-ng start wlan0
@@ -175,7 +175,7 @@ The above output indicates that monitor mode is supported.
 
 ## Interface Capabilities
 
-Not all Wi-Fi netword cards support the same features.
+Not all Wi-Fi network cards support the same features.
 Execute `iw list` to output all the capabilities of the interface.
 For instance, not all network cards can be used to create an access point.
 This is only possible when `AP` is listed as a supported interface mode, for instance:
@@ -273,7 +273,7 @@ When you inject a raw Wi-Fi frame in monitor mode, you will see this frame twice
 The first frame is the one as injected by the userspace program or script, and the second frame is the one that was actually sent.
 There can be slight differences between these frames: the Linux kernel might overwrite certain fields (e.g. it will add a FCS and might overwrite the duration field).
 
-When injecting a Wi-Fi frame with a unicast reciever address the network card _might_ automatically retransmit the frame.
+When injecting a Wi-Fi frame with a unicast receiver address the network card _might_ automatically retransmit the frame.
 These retransmissions will not be shown in Wireshark. For instance, when injecting a probe request with as receiver 00:FF:FF:FF:FF:11 you will see:
 
 ![We see the injected frame and its first transmission](injected_unicast.png)
@@ -286,10 +286,10 @@ When using a second independent network card to capture the injected frame, we w
 ![The frame was retransmitted 15 times](injected_retrans.png)
 
 Frames with a broadcast receiver address are (normally) only transmitted once when injected.
-Note that some network cards may continue to retransmit a frame even though an acknowledgement was recieved.
+Note that some network cards may continue to retransmit a frame even though an acknowledgement was received.
 This behaviour depends on the specific network card being used.
 
-When another device send a frame with as receiver address the MAC address of the interface in monitor mode, then _some_ network cards may automatically send an acknowledgement (e.g. some Atheros cards).
+When another device sends a frame with as receiver address the MAC address of the interface in monitor mode, then _some_ network cards may automatically send an acknowledgement (e.g. some Atheros cards).
 Other network cards won't send an acknowledgement, causing the sender to retransmit the frame.
 
 Advanced monitor and injection parameters are also available.
