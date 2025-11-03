@@ -94,7 +94,13 @@ def Raw(x):
 
 
 def encrypt_ccmp(p, tk, pn, keyid=0, amsdu_spp=False):
-	"""Takes a plaintext Dot11 frame, encrypts it, and adds all the necessairy headers"""
+	"""
+	Takes a plaintext Dot11 frame, encrypts it, and adds all the necessary headers.
+
+	Note: this function can be slow when encrypting a lot of packets. If speed is required,
+	      switching to AESCCM from cryptography.hazmat.primitives.ciphers.aead was previously
+		  shown to increase speed. The AAD can often also be (mostly) reused across packets.
+	"""
 
 	if len(tk) != 16:
 		log(ERROR, f"encrypt_ccmp: key length is {len(station.gtk)}, indicating CCMP isn't being used.")
