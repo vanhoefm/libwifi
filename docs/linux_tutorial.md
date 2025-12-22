@@ -352,7 +352,7 @@ In case the code still doesn't appear to be working, check the following:
 
 7. Make sure the device being tested is using an encryption algorithm and/or general configuration that you want.
 
-8. If you are using a virtual machine, and you have issues configuring monitor mode, set the USB compatibility of the VM to match that of the USB port you are using, e.g., ensure that USB 3.1 is selected in the VM settings. Alternatively, try to run the framework and the tests from a native Linux installation (or a live USB image).
+8. If you are using a virtual machine, and you have issues configuring monitor mode, set the USB compatibility of the VM to match that of the USB port you are using, e.g., ensure that USB 3.1 is selected in the VM settings. Alternatively, try to run the framework and the tests from a native Linux installation (or a live USB image). I've also had cases where the Wi-Fi dongle was detected but was unreliable, even in AP/managed mode, but when I then configured the VirtualBox image to use "USB 3.0 (xHCI) Controller" to match my laptop, suddenly everything worked smoothly.
 
 
 ## Extra Sources
